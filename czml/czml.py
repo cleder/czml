@@ -14,11 +14,28 @@
 #    You should have received a copy of the GNU Lesser General Public
 #    License along with this library; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-
+from itertools import izip_longest
 try:
     import simplejson as json
 except ImportError:
     import json
+
+from datetime import datetime, date
+import dateutil.parser
+
+
+try:
+    unicode
+except NameError:
+    # Python 3
+    basestring = unicode = str
+
+
+def grouper(iterable, n, fillvalue=None):
+    args = [iter(iterable)] * n
+    return izip_longest(*args, fillvalue=fillvalue)
+
+
 
 class CZML(object):
     """ CZML is a subset of JSON, meaning that a valid CZML document
@@ -40,6 +57,10 @@ class CZML(object):
         else:
             return '[]'
 
+    def dump(self):
+        return self.packets
+
+
     def loads(self, data):
         packets = json.loads(data)
         self.load(pakets)
@@ -48,12 +69,191 @@ class CZML(object):
         self.packets = data
 
 
-class Position(object):
+class _DateTimeAware(object):
+    """ A baseclass for Date time aware objects """
+
+    _epoch = None
+    _nextTime = None
+    _previousTime = None
+
+    def __init__(self, epoch=None, nextTime=None, previousTime=None):
+        self.epoch = epoch
+        self.nextTime = nextTime
+        self.previousTime = previousTime
+
+    @property
+    def epoch(self):
+        """ Specifies the epoch to use for times specifies as seconds
+        since an epoch. """
+        if self._epoch:
+            return self._epoch.isoformat()
+
+    @epoch.setter
+    def epoch(self, dt):
+        if dt is None:
+            self._epoch = None
+        elif isinstance(dt, (date,datetime)):
+            self._epoch = dt
+        elif isinstance(dt, basestring):
+            self._epoch = dateutil.parser.parse(dt)
+        else:
+            raise ValueError
+
+    @property
+    def nextTime(self):
+        """The time of the next sample within this interval, specified as
+        either an ISO 8601 date and time string or as seconds since epoch.
+        This property is used to determine if there is a gap between samples
+        specified in different packets."""
+        if isinstance(self._nextTime, (date,datetime)):
+            return self._nextTime.isoformat()
+        elif isinstance(self._nextTime, (int, long, float)):
+            return self._nextTime
+
+    @nextTime.setter
+    def nextTime(self, dt):
+        if dt is None:
+            self._nextTime = None
+        elif isinstance(dt, (date,datetime)):
+            self._nextTime = dt
+        elif isinstance(dt, (int, long, float)):
+            self._nextTime = dt
+        elif isinstance(dt, basestring):
+            try:
+                self._nextTime = float(dt)
+            except ValueError:
+                self._nextTime = dateutil.parser.parse(dt)
+        else:
+            raise ValueError
+
+
+    @property
+    def previousTime(self):
+        """The time of the previous sample within this interval, specified
+        as either an ISO 8601 date and time string or as seconds since epoch.
+        This property is used to determine if there is a gap between samples
+        specified in different packets."""
+        if isinstance(self._previousTime, (date,datetime)):
+            return self._previousTime.isoformat()
+        elif isinstance(self._previousTime, (int, long, float)):
+            return self._previousTime
+
+    @previousTime.setter
+    def previousTime(self, dt):
+        if dt is None:
+            self._previousTime = None
+        elif isinstance(dt, (date,datetime)):
+            self._previousTime = dt
+        elif isinstance(dt, (int, long, float)):
+            self._previousTime = dt
+        elif isinstance(dt, basestring):
+            try:
+                self._previousTime = float(dt)
+            except ValueError:
+                self._previousTime = dateutil.parser.parse(dt)
+        else:
+            raise ValueError
+
+
+    def loads(self, data):
+        d = json.loads(data)
+        self.epoch = d.get('epoch', None)
+        self.nextTime = d.get('nextTime', None)
+        self.previousTime = d.get('previousTime', None)
+
+
+    def data(self):
+        return {'epoch': self.epoch,
+            'nextTime': self.nextTime,
+            'previousTime': self.previousTime,
+            }
+
+    def dumps(self):
+        return json.dumps(self.data())
+
+
+class _Coordinate(object):
+    """ [Longitude, Latitude, Height] or [X, Y, Z] or
+    [Time, Longitude, Latitude, Height] or [Time, X, Y, Z]
+    """
+    x = y = z = 0
+    t = None
+
+    def __init__(self, x, y, z=0, t=None):
+        self.x = x
+        self.y = y
+        self.z = z
+        self.t = t
+
+
+class _Coordinates(object):
+
+    coords = None
+
+    def __init__(self, coords):
+        if len(coords) < 3:
+            self.coords = [_Coordinate(coords[0], coords[1])]
+        elif len(coords) < 4:
+            self.coords = [_Coordinate(coords[0], coords[1], coords[2])]
+        elif len(coords) == 4:
+            self.coords = [_Coordinate(coords[1], coords[2], coords[3], coords[0])]
+        elif len(coords) >= 4:
+            self.coords = []
+            for coord in grouper(coords, 4):
+                self.coords.append(_Coordinate(coord[1], coord[2],
+                                        coord[3], coord[0]))
+
+
+
+
+
+
+
+class Position(_DateTimeAware):
     """ The position of the object in the world. The position has no
     direct visual representation, but it is used to locate billboards,
     labels, and other primitives attached to the object. """
 
-    pass
+
+    # The reference frame in which cartesian positions are specified.
+    # Possible values are "FIXED" and "INERTIAL". In addition, the value
+    # of this property can be a hash (#) symbol followed by the ID of
+    # another object in the same scope whose "position" and "orientation"
+    # properties define the reference frame in which this position is defined.
+    # This property is ignored when specifying position with any type other
+    # than cartesian. If this property is not specified,
+    # the default reference frame is "FIXED".
+    referenceFrame = None
+
+    # The position represented as a Cartesian [X, Y, Z] in the meters
+    # relative to the referenceFrame. If the array has three elements,
+    # the position is constant. If it has four or more elements, they
+    # are time-tagged samples arranged as
+    # [Time, X, Y, Z, Time, X, Y, Z, Time, X, Y, Z, ...],
+    # where Time is an ISO 8601 date and time string or seconds since epoch.
+    cartesian = None
+
+    # The position represented as a WGS 84 Cartographic
+    # [Longitude, Latitude, Height] where longitude and latitude are in
+    # radians and height is in meters. If the array has three elements,
+    # the position is constant. If it has four or more elements, they are
+    # time-tagged samples arranged as
+    # [Time, Longitude, Latitude, Height, Time, Longitude, Latitude, Height, ...],
+    # where Time is an ISO 8601 date and time string or seconds since epoch.
+    cartographicRadians = None
+
+    # The position reprsented as a WGS 84 Cartographic
+    # [Longitude, Latitude, Height] where longitude and latitude are in
+    # degrees and height is in meters. If the array has three elements,
+    # the position is constant. If it has four or more elements, they are
+    # time-tagged samples arranged as
+    # [Time, Longitude, Latitude, Height, Time, Longitude, Latitude, Height, ...],
+    # where Time is an ISO 8601 date and time string or seconds since epoch.
+    cartographicDegrees = None
+
+    def data(self):
+        d = super(Position, self).data()
+
 
 class Billboard (object):
     """A billboard, or viewport-aligned image. The billboard is positioned
