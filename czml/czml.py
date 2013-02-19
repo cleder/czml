@@ -39,6 +39,15 @@ except NameError:
     # Python 3
     basestring = unicode = str
 
+# Import the geometries from shapely if it is installed
+# or otherwise from Pygeoif
+
+from pygeoif import geometry
+
+from pygeoif.geometry import as_shape as asShape
+
+
+
 
 def grouper(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
@@ -172,10 +181,14 @@ class _DateTimeAware(object):
 
 
     def data(self):
-        return {'epoch': self.epoch,
-            'nextTime': self.nextTime,
-            'previousTime': self.previousTime,
-            }
+        d = {}
+        if self.epoch:
+            d['epoch'] = self.epoch
+        if self.nextTime:
+            d['nextTime'] = self.nextTime
+        if self.previousTime:
+            d['previousTime'] = self.previousTime
+        return d
 
     def dumps(self):
         return json.dumps(self.data())
@@ -188,11 +201,23 @@ class _Coordinate(object):
     x = y = z = 0
     t = None
 
-    def __init__(self, x, y, z=0, t=None):
-        self.x = x
-        self.y = y
-        self.z = z
-        self.t = t
+    def __init__(self, x, y=None, z=0, t=None):
+        self.x = float(x)
+        self.y = float(y)
+        self.z = float(z)
+        if t is None:
+            self.t = None
+        elif isinstance(t, (date,datetime)):
+            self.t = t
+        elif isinstance(t, (int, long, float)):
+            self.t = float(t)
+        elif isinstance(t, basestring):
+            try:
+                self.t = float(t)
+            except ValueError:
+                self.t = dateutil.parser.parse(t)
+        else:
+            raise ValueError
 
 
 class _Coordinates(object):
@@ -200,20 +225,43 @@ class _Coordinates(object):
     coords = None
 
     def __init__(self, coords):
-        if len(coords) < 3:
-            self.coords = [_Coordinate(coords[0], coords[1])]
-        elif len(coords) < 4:
-            self.coords = [_Coordinate(coords[0], coords[1], coords[2])]
-        elif len(coords) == 4:
-            self.coords = [_Coordinate(coords[1], coords[2], coords[3], coords[0])]
-        elif len(coords) >= 4:
-            self.coords = []
-            for coord in grouper(coords, 4):
-                self.coords.append(_Coordinate(coord[1], coord[2],
-                                        coord[3], coord[0]))
+        if isinstance(coords, list):
+            try:
+                float(coords[1])
+                if len(coords) < 3:
+                    self.coords = [_Coordinate(coords[0], coords[1])]
+                elif len(coords) < 4:
+                    self.coords = [_Coordinate(coords[0], coords[1], coords[2])]
+                elif len(coords) == 4:
+                    self.coords = [_Coordinate(coords[1], coords[2], coords[3], coords[0])]
+                elif len(coords) >= 4:
+                    self.coords = []
+                    for coord in grouper(coords, 4):
+                        self.coords.append(_Coordinate(coord[1], coord[2],
+                                                coord[3], coord[0]))
+            except TypeError:
+                self.coords = []
+                for coord in grouper(coords, 2):
+                    geom = asShape(coord[1])
+                    assert(isinstance(geom, geometry.Point))
+                    self.coords.append(_Coordinate(*geom.coords[0], t=coord[0]))
         else:
-            raise ValueError
+            geom = asShape(coords)
+            if isinstance(geom, geometry.Point):
+                self.coords = [_Coordinate(*geom.coords[0])]
 
+    def data(self):
+        d = []
+        if self.coords:
+            for coord in self.coords:
+                if isinstance(coord.t, (date,datetime)):
+                     d.append(coord.t.isoformat())
+                else:
+                    d.append(coord.t)
+                d.append(coord.x)
+                d.append(coord.y)
+                d.append(coord.z)
+        return d
 
 
 
@@ -236,34 +284,69 @@ class Position(_DateTimeAware):
     # the default reference frame is "FIXED".
     referenceFrame = None
 
-    # The position represented as a Cartesian [X, Y, Z] in the meters
-    # relative to the referenceFrame. If the array has three elements,
-    # the position is constant. If it has four or more elements, they
-    # are time-tagged samples arranged as
-    # [Time, X, Y, Z, Time, X, Y, Z, Time, X, Y, Z, ...],
-    # where Time is an ISO 8601 date and time string or seconds since epoch.
-    cartesian = None
+    _cartesian = None
+    _cartographicRadians = None
+    _cartographicDegrees = None
 
-    # The position represented as a WGS 84 Cartographic
-    # [Longitude, Latitude, Height] where longitude and latitude are in
-    # radians and height is in meters. If the array has three elements,
-    # the position is constant. If it has four or more elements, they are
-    # time-tagged samples arranged as
-    # [Time, Longitude, Latitude, Height, Time, Longitude, Latitude, Height, ...],
-    # where Time is an ISO 8601 date and time string or seconds since epoch.
-    cartographicRadians = None
+    @property
+    def cartesian(self):
+        """ The position represented as a Cartesian [X, Y, Z] in the meters
+        relative to the referenceFrame. If the array has three elements,
+        the position is constant. If it has four or more elements, they
+        are time-tagged samples arranged as
+        [Time, X, Y, Z, Time, X, Y, Z, Time, X, Y, Z, ...],
+        where Time is an ISO 8601 date and time string or seconds since epoch.
+        """
+        return self._cartesian
 
-    # The position reprsented as a WGS 84 Cartographic
-    # [Longitude, Latitude, Height] where longitude and latitude are in
-    # degrees and height is in meters. If the array has three elements,
-    # the position is constant. If it has four or more elements, they are
-    # time-tagged samples arranged as
-    # [Time, Longitude, Latitude, Height, Time, Longitude, Latitude, Height, ...],
-    # where Time is an ISO 8601 date and time string or seconds since epoch.
-    cartographicDegrees = None
+    @cartesian.setter
+    def cartesian(self, geom):
+        self._cartesian = _Coordinates(geom)
+
+    @property
+    def cartographicDegrees(self):
+        """The position represented as a WGS 84 Cartographic
+        [Longitude, Latitude, Height] where longitude and latitude are in
+        degrees and height is in meters. If the array has three elements,
+        the position is constant. If it has four or more elements, they are
+        time-tagged samples arranged as
+        [Time, Longitude, Latitude, Height, Time, Longitude, Latitude, Height, ...],
+        where Time is an ISO 8601 date and time string or seconds since epoch.
+        """
+        return self._cartographicDegrees
+
+    @cartographicDegrees.setter
+    def cartographicDegrees(self, geom):
+        self._cartographicDegrees = _Coordinates(geom)
+
+    @property
+    def cartographicRadians(self):
+        """The position represented as a WGS 84 Cartographic
+        [Longitude, Latitude, Height] where longitude and latitude are in
+        radians and height is in meters. If the array has three elements,
+        the position is constant. If it has four or more elements, they are
+        time-tagged samples arranged as
+        [Time, Longitude, Latitude, Height, Time, Longitude, Latitude, Height, ...],
+        where Time is an ISO 8601 date and time string or seconds since epoch.
+        """
+        return self._cartographicRadians
+
+    @cartographicRadians.setter
+    def cartographicRadians(self, geom):
+        self._cartographicRadians = _Coordinates(geom)
+
+
 
     def data(self):
         d = super(Position, self).data()
+        if self.cartographicDegrees:
+            d['cartographicDegrees'] = self.cartographicDegrees.data()
+        if self.cartographicRadians:
+            d['cartographicRadians'] = self.cartographicRadians.data()
+        if self.cartesian:
+            d['cartesian'] = self.cartesian.data()
+
+        return d
 
 
 class Billboard (object):

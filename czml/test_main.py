@@ -24,7 +24,7 @@ try:
 except ImportError:
     import czml
 
-
+from pygeoif import geometry
 
 class BaseClassesTestCase( unittest.TestCase ):
 
@@ -74,7 +74,85 @@ class BaseClassesTestCase( unittest.TestCase ):
         self.assertEqual(dtob.data(), json.loads(jst))
 
 
+    def test_Coordinates(self):
+        coord = czml._Coordinates([0,1])
+        self.assertEqual(len(coord.coords), 1)
+        self.assertEqual(coord.coords[0].x, 0)
+        self.assertEqual(coord.coords[0].y, 1)
+        self.assertEqual(coord.coords[0].z, 0)
+        self.assertEqual(coord.coords[0].t, None)
+        coord = czml._Coordinates([0,1,2])
+        self.assertEqual(len(coord.coords), 1)
+        self.assertEqual(coord.coords[0].x, 0)
+        self.assertEqual(coord.coords[0].y, 1)
+        self.assertEqual(coord.coords[0].z, 2)
+        self.assertEqual(coord.coords[0].t, None)
+        now = datetime.now()
+        coord = czml._Coordinates([now, 0,1,2])
+        self.assertEqual(len(coord.coords), 1)
+        self.assertEqual(coord.coords[0].x, 0)
+        self.assertEqual(coord.coords[0].y, 1)
+        self.assertEqual(coord.coords[0].z, 2)
+        self.assertEqual(coord.coords[0].t, now)
+        y2k = datetime(2000,1,1)
+        coord = czml._Coordinates([now, 0, 1, 2, y2k, 3, 4, 5])
+        self.assertEqual(len(coord.coords), 2)
+        self.assertEqual(coord.coords[0].x, 0)
+        self.assertEqual(coord.coords[0].y, 1)
+        self.assertEqual(coord.coords[0].z, 2)
+        self.assertEqual(coord.coords[0].t, now)
+        self.assertEqual(coord.coords[1].x, 3)
+        self.assertEqual(coord.coords[1].y, 4)
+        self.assertEqual(coord.coords[1].z, 5)
+        self.assertEqual(coord.coords[1].t, y2k)
+        coord = czml._Coordinates([now, 0, 1, 2, 6, 3, 4, 5])
+        self.assertEqual(coord.coords[1].t, 6)
+        coord = czml._Coordinates([now.isoformat(), 0, 1, 2, '6', 3, 4, 5])
+        self.assertEqual(coord.coords[1].t, 6)
+        self.assertEqual(coord.coords[0].t, now)
+        p = geometry.Point(0, 1)
+        coord = czml._Coordinates(p)
+        self.assertEqual(coord.coords[0].x, 0)
+        self.assertEqual(coord.coords[0].y, 1)
+        coord = czml._Coordinates([now, p])
+        self.assertEqual(coord.coords[0].x, 0)
+        self.assertEqual(coord.coords[0].y, 1)
+        self.assertEqual(coord.coords[0].t, now)
+        p1 = geometry.Point(0, 1, 2)
+        coord = czml._Coordinates([now, p, y2k, p1])
+        self.assertEqual(coord.coords[0].x, 0)
+        self.assertEqual(coord.coords[0].y, 1)
+        self.assertEqual(coord.coords[0].z, 0)
+        self.assertEqual(coord.coords[0].t, now)
+        self.assertEqual(coord.coords[1].x, 0)
+        self.assertEqual(coord.coords[1].y, 1)
+        self.assertEqual(coord.coords[1].z, 2)
+        self.assertEqual(coord.coords[1].t, y2k)
 
+        self.assertEqual(coord.data(), [now.isoformat(), 0, 1, 0,
+                                        y2k.isoformat(), 0, 1, 2])
+
+
+
+class CzmlClassesTestCase( unittest.TestCase ):
+
+    def testPosition(self):
+        pos = czml.Position()
+        now = datetime.now()
+        pos.epoch = now
+        coords = [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]
+        pos.cartographicRadians = coords
+        self.assertEqual(pos.data()['cartographicRadians'],
+            coords)
+        js = {'epoch': now.isoformat(), 'cartographicRadians': coords}
+        self.assertEqual(pos.data(), js)
+        self.assertEqual(pos.dumps(), json.dumps(js))
+        pos.cartographicDegrees = coords
+        self.assertEqual(pos.data()['cartographicDegrees'],
+            coords)
+        pos.cartesian = coords
+        self.assertEqual(pos.data()['cartesian'],
+            coords)
 
 
 
