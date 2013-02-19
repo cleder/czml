@@ -26,6 +26,12 @@ except ImportError:
 from datetime import datetime, date
 import dateutil.parser
 
+try:
+    long
+except NameError:
+    # Python 3
+    long = int
+
 
 try:
     unicode
