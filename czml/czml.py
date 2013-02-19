@@ -14,7 +14,10 @@
 #    You should have received a copy of the GNU Lesser General Public
 #    License along with this library; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
-from itertools import izip_longest
+try:
+    from itertools import izip_longest
+except ImportError:
+    from itertools import zip_longest as izip_longest
 try:
     import simplejson as json
 except ImportError:
@@ -202,6 +205,8 @@ class _Coordinates(object):
             for coord in grouper(coords, 4):
                 self.coords.append(_Coordinate(coord[1], coord[2],
                                         coord[3], coord[0]))
+        else:
+            raise ValueError
 
 
 
