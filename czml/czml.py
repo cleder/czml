@@ -173,11 +173,14 @@ class _DateTimeAware(object):
             raise ValueError
 
 
+    def load(self, data):
+        self.epoch = data.get('epoch', None)
+        self.nextTime = data.get('nextTime', None)
+        self.previousTime = data.get('previousTime', None)
+
     def loads(self, data):
         d = json.loads(data)
-        self.epoch = d.get('epoch', None)
-        self.nextTime = d.get('nextTime', None)
-        self.previousTime = d.get('previousTime', None)
+        self.load(d)
 
 
     def data(self):
@@ -288,6 +291,13 @@ class Position(_DateTimeAware):
     _cartographicRadians = None
     _cartographicDegrees = None
 
+
+    def __init__(self, referenceFrame= None, cartesian=None,
+            cartographicRadians=None, cartographicDegrees=None,
+            epoch=None, nextTime=None, previousTime=None):
+        super(Position, self).__init__(epoch, nextTime, previousTime)
+
+
     @property
     def cartesian(self):
         """ The position represented as a Cartesian [X, Y, Z] in the meters
@@ -301,7 +311,10 @@ class Position(_DateTimeAware):
 
     @cartesian.setter
     def cartesian(self, geom):
-        self._cartesian = _Coordinates(geom)
+        if geom is not None:
+            self._cartesian = _Coordinates(geom)
+        else:
+            self._cartesian = None
 
     @property
     def cartographicDegrees(self):
@@ -317,7 +330,11 @@ class Position(_DateTimeAware):
 
     @cartographicDegrees.setter
     def cartographicDegrees(self, geom):
-        self._cartographicDegrees = _Coordinates(geom)
+        if geom is not None:
+            self._cartographicDegrees = _Coordinates(geom)
+        else:
+            self._cartographicDegrees = None
+
 
     @property
     def cartographicRadians(self):
@@ -333,8 +350,16 @@ class Position(_DateTimeAware):
 
     @cartographicRadians.setter
     def cartographicRadians(self, geom):
-        self._cartographicRadians = _Coordinates(geom)
+        if geom is not None:
+            self._cartographicRadians = _Coordinates(geom)
+        else:
+            self._cartographicRadians = None
 
+    def load(self, data):
+        super(Position, self).load(data)
+        self.cartographicDegrees = data.get('cartographicDegrees', None)
+        self.cartographicRadians = data.get('cartographicRadians', None)
+        self.cartesian = data.get('cartesian', None)
 
 
     def data(self):
@@ -349,12 +374,117 @@ class Position(_DateTimeAware):
         return d
 
 
+class Scale(_DateTimeAware):
+    """ The scale of the billboard. The scale is multiplied with the
+    pixel size of the billboard's image. For example, if the scale is 2.0,
+    the billboard will be rendered with twice the number of pixels,
+    in each direction, of the image."""
+
+    _number = None
+
+
+    @property
+    def number(self):
+        """ The floating-point value. The value may be a single number,
+        in which case the value is constant over the interval, or it may
+        be an array. If it is an array and the array has one element,
+        the value is constant over the interval. If it has two or more
+        elements, they are time-tagged samples arranged as
+        [Time, Value, Time, Value, ...], where Time is an ISO 8601 date
+        and time string or seconds since epoch."""
+        if isinstance(self._number, list):
+            val = []
+            for d in grouper(self._number, 2):
+                if isinstance(d[0], (int, long, float)):
+                     val.append(d[0])
+                else:
+                     val.append(d[0].isoformat())
+            return val
+        else:
+            return self._number
+
+    @number.setter
+    def number(self, data):
+        self._number = []
+        if isinstance(data, list):
+            if len(data) > 1:
+                for d in grouper(data, 2):
+                    v = float(d[1])
+                    t = d[0]
+                    if isinstance(t, (date,datetime)):
+                       t = t
+                    elif isinstance(t, (int, long, float)):
+                        t = float(t)
+                    elif isinstance(t, basestring):
+                        try:
+                            t = float(t)
+                        except ValueError:
+                            t = dateutil.parser.parse(t)
+                    else:
+                        raise ValueError
+                    self._number.append((t,v))
+            else:
+                self._number = float(data[0])
+        else:
+            self._number = float(data)
+
+    def data(self):
+        d = super(Scale, self).data()
+        if self.number:
+            d['number'] = self.number
+        return d
+
 class Billboard (object):
     """A billboard, or viewport-aligned image. The billboard is positioned
     in the scene by the position property.
     A billboard is sometimes called a marker."""
 
-    pass
+    # The image displayed on the billboard, expressed as a URL.
+    # For broadest client compatibility, the URL should be accessible
+    # via Cross-Origin Resource Sharing (CORS).
+    # The URL may also be a data URI.
+    image = None
+
+    # Whether or not the billboard is shown.
+    show = None
+
+    scale = None
+
+    #@property
+    #def scale(self):
+        #"""The scale of the billboard. The scale is multiplied with the
+        #pixel size of the billboard's image. For example, if the scale is
+        #2.0, the billboard will be rendered with twice the number of pixels,
+        #in each direction, of the image."""
+        #return self._scale
+
+    #@scale.setter
+    #def scale(self, data):
+        #self._scale = Scale(data)
+
+    def data(self):
+        d = {}
+        if self.show:
+            d['show'] = True
+        if self.show == False:
+            d['show'] = False
+        if self.image:
+            d['image'] = self.image
+        if self.scale: #XXX
+            d['scale'] = self.scale
+        return d
+
+    def dumps(self):
+        return json.dumps(self.data())
+
+    def load(self, data):
+        self.show = data.get('show', None)
+        self.image = data.get('image', None)
+        self.scale = data.get('scale', None)
+
+    def loads(self, data):
+        d = json.loads(data)
+        self.load(d)
 
 class VertexPositions(object):
     """The world-space positions of vertices.
@@ -452,15 +582,9 @@ class CZMLPacket(object):
     # of strings representing intervals.
     availability = None
 
-    # The position of the object in the world. The position has no direct
-    # visual representation, but it is used to locate billboards, labels,
-    # and other primitives attached to the object.
-    position = None
+    _position = None
 
-    # A billboard, or viewport-aligned image. The billboard is positioned
-    # in the scene by the position property. A billboard is sometimes
-    # called a marker.
-    billboard = None
+    _billboard = None
 
     # The world-space positions of vertices. The vertex positions have no
     # direct visual representation, but they are used to define polygons,
@@ -519,9 +643,61 @@ class CZMLPacket(object):
         self.id = id
         self.availability = availability
 
+
+    @property
+    def position(self):
+        """The position of the object in the world. The position has no direct
+        visual representation, but it is used to locate billboards, labels,
+        and other primitives attached to the object.
+        """
+        if self._position is not None:
+            return self._position.data()
+
+    @position.setter
+    def position(self, position):
+        if isinstance(position, Position):
+            self._position = position
+        elif position is None:
+            self._position = None
+        else:
+            raise TypeError
+
+
+    @property
+    def billboard(self):
+        """A billboard, or viewport-aligned image. The billboard is positioned
+        in the scene by the position property. A billboard is sometimes
+        called a marker."""
+        if self._billboard is not None:
+            return self._billboard.data()
+
+    @billboard.setter
+    def billboard(self, billboard):
+        if isinstance(billboard, Billboard):
+            self._billboard = billboard
+        elif billboard is None:
+            self._billboard = None
+        else:
+            raise TypeError
+
+
+    def data(self):
+        d = {}
+        if self.id:
+            d['id']= self.id
+        #if self.availability is not None:
+        #    d['availability'] = self.availability
+        if self.billboard is not None:
+            d['billboard'] = self.billboard
+        if self.position is not None:
+            d['position'] = self.position
+        return d
+
+
+
     def dumps(self):
-        d = {'id': self.id, 'availability': self.availability}
-        json.dumps(d)
+        d = self.data()
+        return json.dumps(d)
 
 
     def loads(self, data):
@@ -530,4 +706,4 @@ class CZMLPacket(object):
 
     def load(self, data):
         self.id = data.get('id', None)
-        self.availability = data.get('availability', None)
+        #self.availability = data.get('availability', None)
