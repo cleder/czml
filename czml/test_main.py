@@ -156,6 +156,9 @@ class BaseClassesTestCase( unittest.TestCase ):
         col.rgbaf = [now, 0, 0.255, 0.127, 0.55, y2k.isoformat(), 0.5, 0.6, 0.7, 0.8]
         self.assertEqual(col.rgbaf, [now.isoformat(), 0.0, 0.255, 0.127, 0.55,
                                     y2k.isoformat(), 0.5, 0.6, 0.7, 0.8])
+        col2 = czml.Color()
+        col2.loads(col.dumps())
+        self.assertEqual(col.data(), col2.data())
 
 class CzmlClassesTestCase( unittest.TestCase ):
 

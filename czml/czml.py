@@ -493,6 +493,13 @@ class Color(_DateTimeAware):
             d['rgba'] = self.rgba
         if self.rgbaf is not None:
             d['rgbaf'] = self.rgbaf
+        return d
+
+
+    def load(self, data):
+        super(Color, self).load(data)
+        self.rgba = data.get('rgba', None)
+        self.rgbaf = data.get('rgbaf', None)
 
 
 class Scale(_DateTimeAware):
