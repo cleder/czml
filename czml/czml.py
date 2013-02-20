@@ -657,6 +657,10 @@ class CZMLPacket(object):
     def position(self, position):
         if isinstance(position, Position):
             self._position = position
+        elif isinstance(position, dict):
+            pos = Position()
+            pos.load(position)
+            self._position = pos
         elif position is None:
             self._position = None
         else:
@@ -675,6 +679,10 @@ class CZMLPacket(object):
     def billboard(self, billboard):
         if isinstance(billboard, Billboard):
             self._billboard = billboard
+        elif isinstance(billboard, dict):
+            bb = Billboard()
+            bb.load(billboard)
+            self._billboard = bb
         elif billboard is None:
             self._billboard = None
         else:
@@ -707,3 +715,6 @@ class CZMLPacket(object):
     def load(self, data):
         self.id = data.get('id', None)
         #self.availability = data.get('availability', None)
+        self.billboard = data.get('billboard', None)
+        self.position = data.get('position', None)
+

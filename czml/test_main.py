@@ -157,6 +157,9 @@ class CzmlClassesTestCase( unittest.TestCase ):
         pos.cartesian = coords
         self.assertEqual(pos.data()['cartesian'],
             coords)
+        pos2 = czml.Position()
+        pos2.loads(pos.dumps())
+        self.assertEqual(pos.data(), pos2.data())
 
 
     def testBillboard(self):
@@ -166,6 +169,9 @@ class CzmlClassesTestCase( unittest.TestCase ):
         bb.show = True
         self.assertEqual(bb.data(),
             {'image': 'http://localhost/img.png', 'scale': 0.7, 'show': True})
+        bb2 = czml.Billboard()
+        bb2.loads(bb.dumps())
+        self.assertEqual(bb.data(), bb2.data())
 
     def testCZMLPacket(self):
         p = czml.CZMLPacket(id='abc')
@@ -178,6 +184,9 @@ class CzmlClassesTestCase( unittest.TestCase ):
         self.assertEqual(p.data(),
             {'billboard': {'image': 'http://localhost/img.png',
             'scale': 0.7, 'show': True}, 'id': 'abc'})
+        p2 = czml.CZMLPacket(id='abc')
+        p2.loads(p.dumps())
+        self.assertEqual(p.data(), p2.data())
         pos = czml.Position()
         coords = [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]
         pos.cartesian = coords
@@ -186,6 +195,8 @@ class CzmlClassesTestCase( unittest.TestCase ):
             {'billboard': {'image': 'http://localhost/img.png',
             'scale': 0.7, 'show': True}, 'id': 'abc',
             'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]}})
+        p2.loads(p.dumps())
+        self.assertEqual(p.data(), p2.data())
 
 
 
