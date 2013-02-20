@@ -137,6 +137,25 @@ class BaseClassesTestCase( unittest.TestCase ):
     def testScale(self):
         pass
 
+    def testColor(self):
+        col = czml.Color()
+        col.rgba = [0, 255, 127]
+        self.assertEqual(col.rgba, [0, 255, 127, 1])
+        col.rgba = [0, 255, 127, 55]
+        self.assertEqual(col.rgba, [0, 255, 127, 55])
+        now = datetime.now()
+        col.rgba = [now, 0, 255, 127, 55]
+        self.assertEqual(col.rgba, [now.isoformat(), 0, 255, 127, 55])
+        y2k = datetime(2000,1,1)
+        col.rgba = [now, 0, 255, 127, 55, y2k.isoformat(), 5, 6, 7, 8]
+        self.assertEqual(col.rgba, [now.isoformat(), 0, 255, 127, 55,
+                                    y2k.isoformat(), 5, 6, 7, 8])
+        col.rgba = [1, 0, 255, 127, 55, 2, 5, 6, 7, 8]
+        self.assertEqual(col.rgba, [1, 0, 255, 127, 55,
+                                    2, 5, 6, 7, 8])
+        col.rgbaf = [now, 0, 0.255, 0.127, 0.55, y2k.isoformat(), 0.5, 0.6, 0.7, 0.8]
+        self.assertEqual(col.rgbaf, [now.isoformat(), 0.0, 0.255, 0.127, 0.55,
+                                    y2k.isoformat(), 0.5, 0.6, 0.7, 0.8])
 
 class CzmlClassesTestCase( unittest.TestCase ):
 
@@ -169,6 +188,7 @@ class CzmlClassesTestCase( unittest.TestCase ):
         bb.show = True
         self.assertEqual(bb.data(),
             {'image': 'http://localhost/img.png', 'scale': 0.7, 'show': True})
+        #bb.color =
         bb2 = czml.Billboard()
         bb2.loads(bb.dumps())
         self.assertEqual(bb.data(), bb2.data())

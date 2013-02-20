@@ -259,6 +259,8 @@ class _Coordinates(object):
             for coord in self.coords:
                 if isinstance(coord.t, (date,datetime)):
                      d.append(coord.t.isoformat())
+                elif coord.t is None:
+                    pass
                 else:
                     d.append(coord.t)
                 d.append(coord.x)
@@ -374,6 +376,125 @@ class Position(_DateTimeAware):
         return d
 
 
+
+
+class _Color(object):
+    r = g = b = a = 0
+    t = None
+
+    def __init__(self, r, g, b, a=1, t=None, num=float):
+        self.r = num(r)
+        self.g = num(g)
+        self.b = num(b)
+        self.a = num(a)
+        if t is None:
+            self.t = None
+        elif isinstance(t, (date,datetime)):
+            self.t = t
+        elif isinstance(t, (int, long, float)):
+            self.t = float(t)
+        elif isinstance(t, basestring):
+            try:
+                self.t = float(t)
+            except ValueError:
+                self.t = dateutil.parser.parse(t)
+        else:
+            raise ValueError
+
+
+
+class _Colors(object):
+    """ The color specified as an array of color components
+    [Red, Green, Blue, Alpha].
+    If the array has four elements, the color is constant.
+    If it has five or more elements, they are time-tagged samples arranged as
+    [Time, Red, Green, Blue, Alpha, Time, Red, Green, Blue, Alpha, ...],
+    where Time is an ISO 8601 date and time string or seconds since epoch.
+    """
+    colors = None
+
+    def __init__(self, colors, num=float):
+        if isinstance(colors, list):
+            if len(colors) == 3:
+                self.colors = [_Color(colors[0], colors[1], colors[2], num=num)]
+            elif len(colors) == 4:
+                self.colors = [_Color(colors[0], colors[1], colors[2], colors[3], num=num)]
+            elif len(colors) == 5:
+                self.colors = [_Color(colors[1], colors[2], colors[3], colors[4], colors[0], num=num)]
+            elif len(colors) >= 5:
+                self.colors = []
+                for color in grouper(colors, 5):
+                    self.colors.append(_Color(color[1], color[2],
+                                            color[3], color[4] ,color[0], num=num))
+            else:
+                raise ValueError
+        else:
+            raise ValueError
+
+    def data(self):
+        d = []
+        if self.colors:
+            for color in self.colors:
+                if isinstance(color.t, (date,datetime)):
+                     d.append(color.t.isoformat())
+                elif color.t is None:
+                    pass
+                else:
+                    d.append(color.t)
+                d.append(color.r)
+                d.append(color.g)
+                d.append(color.b)
+                d.append(color.a)
+        return d
+
+
+class Color(_DateTimeAware):
+
+    _rgba = None
+    _rgbaf = None
+
+    @property
+    def rgba(self):
+        """The color specified as an array of color components
+        [Red, Green, Blue, Alpha] where each component is in the
+        range 0-255. If the array has four elements, the color is constant.
+        If it has five or more elements, they are time-tagged samples arranged as
+        [Time, Red, Green, Blue, Alpha, Time, Red, Green, Blue, Alpha, ...],
+        where Time is an ISO 8601 date and time string or seconds since epoch.
+        """
+        if self._rgba is not None:
+            return self._rgba.data()
+
+    @rgba.setter
+    def rgba(self, colors):
+        self._rgba = _Colors(colors, num=int)
+
+    @property
+    def rgbaf(self):
+        """The color specified as an array of color components
+        [Red, Green, Blue, Alpha] where each component is in the
+        range 0.0-1.0. If the array has four elements, the color is constant.
+        If it has five or more elements, they are time-tagged samples
+        arranged as
+        [Time, Red, Green, Blue, Alpha, Time, Red, Green, Blue, Alpha, ...],
+        where Time is an ISO 8601 date and time string or seconds since epoch.
+        """
+        if self._rgbaf is not None:
+            return self._rgbaf.data()
+
+    @rgbaf.setter
+    def rgbaf(self, colors):
+        self._rgbaf = _Colors(colors, num=float)
+
+
+    def data(self):
+        d = super(Color, self).data()
+        if self.rgba is not None:
+            d['rgba'] = self.rgba
+        if self.rgbaf is not None:
+            d['rgbaf'] = self.rgbaf
+
+
 class Scale(_DateTimeAware):
     """ The scale of the billboard. The scale is multiplied with the
     pixel size of the billboard's image. For example, if the scale is 2.0,
@@ -448,7 +569,18 @@ class Billboard (object):
     # Whether or not the billboard is shown.
     show = None
 
+    _color = None
+
     scale = None
+
+    #@property
+    #def color(self):
+    #    return self.color.data()
+
+    #@color.setter
+    #def color(self, colors):
+    #    self._color = Color(colors)
+
 
     #@property
     #def scale(self):
@@ -472,6 +604,8 @@ class Billboard (object):
             d['image'] = self.image
         if self.scale: #XXX
             d['scale'] = self.scale
+        #if self.color is not None:
+        #    d['color'] = self.color
         return d
 
     def dumps(self):
