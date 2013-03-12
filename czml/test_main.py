@@ -220,7 +220,20 @@ class CzmlClassesTestCase( unittest.TestCase ):
             'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]}})
         p2.loads(p.dumps())
         self.assertEqual(p.data(), p2.data())
+        return p
 
+    def testCZML(self):
+        cz = czml.CZML()
+        self.assertEqual(list(cz.data()), [])
+        p = self.testCZMLPacket()
+        cz.packets.append(p)
+        self.assertEqual(list(cz.data()),
+            [{'billboard': {'image': 'http://localhost/img.png',
+            'scale': 0.7, 'show': True}, 'id': 'abc',
+            'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]}}])
+        cz1 = czml.CZML()
+        cz1.loads(cz.dumps())
+        self.assertEqual(list(cz.data()),list(cz1.data()))
 
 
 

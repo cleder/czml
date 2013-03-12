@@ -39,7 +39,7 @@ except NameError:
     # Python 3
     basestring = unicode = str
 
-# Import the geometries from shapely if it is installed
+# XXX Import the geometries from shapely if it is installed
 # or otherwise from Pygeoif
 
 from pygeoif import geometry
@@ -71,7 +71,8 @@ class CZML(object):
 
     def dumps(self):
         if self.packets:
-            json.dumps(packets)
+            d = list(self.data())
+            return json.dumps(d)
         else:
             return '[]'
 
@@ -79,12 +80,23 @@ class CZML(object):
         return self.packets
 
 
+    def data(self):
+        for p in self.packets:
+            yield p.data()
+
+
+
     def loads(self, data):
         packets = json.loads(data)
-        self.load(pakets)
+        self.load(packets)
+
 
     def load(self, data):
-        self.packets = data
+        self.packets = []
+        for packet in data:
+            p = CZMLPacket()
+            p.load(packet)
+            self.packets.append(p)
 
 
 class _DateTimeAware(object):
