@@ -32,7 +32,6 @@ except NameError:
     # Python 3
     long = int
 
-
 try:
     unicode
 except NameError:
@@ -54,8 +53,25 @@ def grouper(iterable, n, fillvalue=None):
     return izip_longest(*args, fillvalue=fillvalue)
 
 
+class _CZMLBaseObject(object):
 
-class CZML(object):
+    def dumps(self):
+        d = self.data()
+        return json.dumps(d)
+
+    def data(self):
+        raise NotImplementedError
+
+    def loads(self, data):
+        packets = json.loads(data)
+        self.load(packets)
+
+    def load(self, data):
+        raise NotImplementedError
+
+
+
+class CZML(_CZMLBaseObject):
     """ CZML is a subset of JSON, meaning that a valid CZML document
     is also a valid JSON document. Specifically, a CZML document contains
     a single JSON array where each object-literal element in the array is
@@ -65,31 +81,19 @@ class CZML(object):
 
     def __init__(self, packets=None):
         if packets:
-            self.packets = packets
+            for p in packets:
+                self.append(p)
         else:
             self.packets = []
-
-    def dumps(self):
-        if self.packets:
-            d = list(self.data())
-            return json.dumps(d)
-        else:
-            return '[]'
-
-    def dump(self):
-        return self.packets
 
 
     def data(self):
         for p in self.packets:
             yield p.data()
 
-
-
-    def loads(self, data):
-        packets = json.loads(data)
-        self.load(packets)
-
+    def dumps(self):
+        d = list(self.data())
+        return json.dumps(d)
 
     def load(self, data):
         self.packets = []
@@ -98,8 +102,15 @@ class CZML(object):
             p.load(packet)
             self.packets.append(p)
 
+    def append(self, packet):
+        if self.packets is None:
+            self.packets = []
+        if isinstance(packet, CZMLPacket):
+            self.packets.append(packet)
+        else:
+            raise ValueError
 
-class _DateTimeAware(object):
+class _DateTimeAware(_CZMLBaseObject):
     """ A baseclass for Date time aware objects """
 
     _epoch = None
@@ -190,11 +201,6 @@ class _DateTimeAware(object):
         self.nextTime = data.get('nextTime', None)
         self.previousTime = data.get('previousTime', None)
 
-    def loads(self, data):
-        d = json.loads(data)
-        self.load(d)
-
-
     def data(self):
         d = {}
         if self.epoch:
@@ -205,8 +211,6 @@ class _DateTimeAware(object):
             d['previousTime'] = self.previousTime
         return d
 
-    def dumps(self):
-        return json.dumps(self.data())
 
 
 class _Coordinate(object):
@@ -574,7 +578,7 @@ class Scale(_DateTimeAware):
             d['number'] = self.number
         return d
 
-class Billboard (object):
+class Billboard(_CZMLBaseObject):
     """A billboard, or viewport-aligned image. The billboard is positioned
     in the scene by the position property.
     A billboard is sometimes called a marker."""
@@ -627,19 +631,13 @@ class Billboard (object):
         #    d['color'] = self.color
         return d
 
-    def dumps(self):
-        return json.dumps(self.data())
-
     def load(self, data):
         self.show = data.get('show', None)
         self.image = data.get('image', None)
         self.scale = data.get('scale', None)
 
-    def loads(self, data):
-        d = json.loads(data)
-        self.load(d)
 
-class VertexPositions(object):
+class VertexPositions(_CZMLBaseObject):
     """The world-space positions of vertices.
     The vertex positions have no direct visual representation, but they
     are used to define polygons, polylines, and other objects attached
@@ -648,44 +646,64 @@ class VertexPositions(object):
     pass
 
 
-class Orientation(object):
+class Orientation(_CZMLBaseObject):
     """The orientation of the object in the world.
     The orientation has no direct visual representation, but it is used
     to orient models, cones, and pyramids attached to the object."""
 
     pass
 
-class Point(object):
+class Point(_CZMLBaseObject):
     """A point, or viewport-aligned circle.
     The point is positioned in the scene by the position property. """
 
     pass
 
-class Label(object):
+class Label(_CZMLBaseObject):
     """ A string of text.
     The label is positioned in the scene by the position property."""
 
-    pass
+    text = None
+    show = False
 
-class Polyline(object):
+    def __init__(self, text=None, show=False):
+        self.text = text
+        self.show = show
+
+    def data(self):
+        d = {}
+        if self.show:
+            d['show'] = True
+        if self.show == False:
+            d['show'] = False
+        if self.text:
+            d['text'] = self.text
+        return d
+
+    def load(self, data):
+        self.show = data.get('show', None)
+        self.text = data.get('text', None)
+
+
+class Polyline(_CZMLBaseObject):
     """ A polyline, which is a line in the scene composed of multiple segments.
     The vertices of the polyline are specified by the vertexPositions property.
     """
     pass
 
-class Path(object):
+class Path(_CZMLBaseObject):
     """A path, which is a polyline defined by the motion of an object over
     time. The possible vertices of the path are specified by the position
     property."""
     pass
 
-class Polygon(object):
+class Polygon(_CZMLBaseObject):
     """A polygon, which is a closed figure on the surface of the Earth.
     The vertices of the polygon are specified by the vertexPositions property.
     """
     pass
 
-class Cone(object):
+class Cone(_CZMLBaseObject):
     """ A cone starts at a point or apex and extends in a circle of
     directions which all have the same angular separation from the Z-axis
     of the object to which the cone is attached. The cone may be capped
@@ -696,7 +714,7 @@ class Cone(object):
     """
     pass
 
-class Pyramid(object):
+class Pyramid(_CZMLBaseObject):
     """A pyramid starts at a point or apex and extends in a specified list
     of directions from the apex. Each pair of directions forms a face of
     the pyramid. The pyramid may be capped at a radial limit.
@@ -704,13 +722,13 @@ class Pyramid(object):
     pass
 
 
-class Camera(object):
+class Camera(_CZMLBaseObject):
     """A camera."""
     pass
 
 
 
-class CZMLPacket(object):
+class CZMLPacket(_CZMLBaseObject):
     """  A CZML packet describes the graphical properties for a single
     object in the scene, such as a single aircraft.
     """
@@ -753,9 +771,7 @@ class CZMLPacket(object):
     # the scene by the position property.
     point = None
 
-    # A string of text. The label is positioned in the scene by the
-    # position property.
-    label = None
+    _label = None
 
     # A polyline, which is a line in the scene composed of multiple segments.
     # The vertices of the polyline are specified by the vertexPositions
@@ -821,6 +837,28 @@ class CZMLPacket(object):
 
 
     @property
+    def label(self):
+        """A string of text. The label is positioned in the scene by the
+        position property."""
+        if self._label is not None:
+            return self._label.data()
+
+    @label.setter
+    def label(self, label):
+        if isinstance(label, Label):
+            self._label = label
+        elif isinstance(label, dict):
+            l = Label()
+            l.load(label)
+            self._label = l
+        elif label is None:
+            self._label = None
+        else:
+            raise TypeError
+
+
+
+    @property
     def billboard(self):
         """A billboard, or viewport-aligned image. The billboard is positioned
         in the scene by the position property. A billboard is sometimes
@@ -852,22 +890,15 @@ class CZMLPacket(object):
             d['billboard'] = self.billboard
         if self.position is not None:
             d['position'] = self.position
+        if self.label  is not None:
+            d['label'] = self.label
         return d
 
-
-
-    def dumps(self):
-        d = self.data()
-        return json.dumps(d)
-
-
-    def loads(self, data):
-        d = json.loads(data)
-        self.load(d)
 
     def load(self, data):
         self.id = data.get('id', None)
         #self.availability = data.get('availability', None)
         self.billboard = data.get('billboard', None)
         self.position = data.get('position', None)
+        self.label = data.get('label', None)
 
