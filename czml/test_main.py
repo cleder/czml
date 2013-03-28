@@ -229,8 +229,11 @@ class CzmlClassesTestCase( unittest.TestCase ):
         bb.image = 'http://localhost/img.png'
         bb.scale = 0.7
         bb.show = True
+        bb.color = {'rgba': [0, 255, 127, 55]}
         self.assertEqual(bb.data(),
-            {'image': 'http://localhost/img.png', 'scale': 0.7, 'show': True})
+            {'image': 'http://localhost/img.png', 'scale': 0.7,
+            'color': {'rgba': [0, 255, 127, 55]},
+            'show': True})
         #bb.color =
         bb2 = czml.Billboard()
         bb2.loads(bb.dumps())

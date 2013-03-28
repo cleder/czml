@@ -604,14 +604,26 @@ class Billboard(_CZMLBaseObject):
 
     scale = None
 
-    #@property
-    #def color(self):
-    #    return self.color.data()
+    @property
+    def color(self):
+        """ The color of the billboard. This color value is multiplied
+        with the values of the billboard's "image" to produce the
+        final color."""
+        if self._color is not None:
+            return self._color.data()
 
-    #@color.setter
-    #def color(self, colors):
-    #    self._color = Color(colors)
-
+    @color.setter
+    def color(self, color):
+        if isinstance(color, Color):
+            self._color = color
+        elif isinstance(color, dict):
+            col = Color()
+            col.load(color)
+            self._color = col
+        elif color is None:
+            self._color = None
+        else:
+            raise TypeError
 
     #@property
     #def scale(self):
@@ -635,14 +647,15 @@ class Billboard(_CZMLBaseObject):
             d['image'] = self.image
         if self.scale: #XXX
             d['scale'] = self.scale
-        #if self.color is not None:
-        #    d['color'] = self.color
+        if self.color is not None:
+            d['color'] = self.color
         return d
 
     def load(self, data):
         self.show = data.get('show', None)
         self.image = data.get('image', None)
         self.scale = data.get('scale', None)
+        self.color = data.get('color', None)
 
 
 class VertexPositions(_CZMLBaseObject):
