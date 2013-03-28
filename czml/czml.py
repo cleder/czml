@@ -444,6 +444,8 @@ class _Colors(object):
                                             color[3], color[4] ,color[0], num=num))
             else:
                 raise ValueError
+        elif colors is None:
+            self.colors = None
         else:
             raise ValueError
 
@@ -483,7 +485,10 @@ class Color(_DateTimeAware):
 
     @rgba.setter
     def rgba(self, colors):
-        self._rgba = _Colors(colors, num=int)
+        if colors is None:
+            self._rgba = None
+        else:
+            self._rgba = _Colors(colors, num=int)
 
     @property
     def rgbaf(self):
@@ -500,7 +505,10 @@ class Color(_DateTimeAware):
 
     @rgbaf.setter
     def rgbaf(self, colors):
-        self._rgbaf = _Colors(colors, num=float)
+        if colors is None:
+            self._rgbaf = None
+        else:
+            self._rgbaf = _Colors(colors, num=float)
 
 
     def data(self):
@@ -657,7 +665,82 @@ class Point(_CZMLBaseObject):
     """A point, or viewport-aligned circle.
     The point is positioned in the scene by the position property. """
 
-    pass
+    show = False
+    _color = None
+    _outlineColor = None
+
+    # The width of the outline of the point.
+    outlineWidth = None
+
+    # The size of the point, in pixels.
+    pixelSize = None
+
+    @property
+    def color(self):
+        """ The color of the point."""
+        if self._color is not None:
+            return self._color.data()
+
+    @color.setter
+    def color(self, color):
+        if isinstance(color, Color):
+            self._color = color
+        elif isinstance(color, dict):
+            col = Color()
+            col.load(color)
+            self._color = col
+        elif color is None:
+            self._color = None
+        else:
+            raise TypeError
+
+    @property
+    def outlineColor(self):
+        """ The color of the outline of the point."""
+        if self._outlineColor is not None:
+            return self._outlineColor.data()
+
+    @outlineColor.setter
+    def outlineColor(self, color):
+        if isinstance(color, Color):
+            self._outlineColor = color
+        elif isinstance(color, dict):
+            col = Color()
+            col.load(color)
+            self._outlineColor = col
+        elif color is None:
+            self._outlineColor = None
+        else:
+            raise TypeError
+
+
+
+
+    def data(self):
+        d = {}
+        if self.show:
+            d['show'] = True
+        if self.show == False:
+            d['show'] = False
+        if self.color:
+            d['color'] = self.color
+        if self.pixelSize:
+            d['pixelSize'] = self.pixelSize
+        if self.outlineColor:
+            d['outlineColor'] = self.outlineColor
+        if self.outlineWidth:
+            d['outlineWidth'] = self.outlineWidth
+
+        return d
+
+    def load(self, data):
+        self.show = data.get('show', None)
+        self.color = data.get('color', None)
+        self.outlineColor = data.get('outlineColor', None)
+        self.pixelSize = data.get('pixelSize', None)
+        self.outlineWidth = data.get('outlineWidth', None)
+
+
 
 class Label(_CZMLBaseObject):
     """ A string of text.
@@ -767,9 +850,7 @@ class CZMLPacket(_CZMLBaseObject):
     # cones, and pyramids attached to the object.
     orientation = None
 
-    # A point, or viewport-aligned circle. The point is positioned in
-    # the scene by the position property.
-    point = None
+    _point = None
 
     _label = None
 
@@ -879,6 +960,26 @@ class CZMLPacket(_CZMLBaseObject):
         else:
             raise TypeError
 
+    @property
+    def point(self):
+        """A point, or viewport-aligned circle. The point is positioned in
+        the scene by the position property."""
+        if self._point is not None:
+            return self._point.data()
+
+    @point.setter
+    def point(self, point):
+        if isinstance(point, Point):
+            self._point = point
+        elif isinstance(point, dict):
+            p = Point()
+            p.load(point)
+            self._point = p
+        elif point is None:
+            self._point = None
+        else:
+            raise TypeError
+
 
     def data(self):
         d = {}
@@ -892,6 +993,8 @@ class CZMLPacket(_CZMLBaseObject):
             d['position'] = self.position
         if self.label  is not None:
             d['label'] = self.label
+        if self.point  is not None:
+            d['point'] = self.point
         return d
 
 
@@ -901,4 +1004,5 @@ class CZMLPacket(_CZMLBaseObject):
         self.billboard = data.get('billboard', None)
         self.position = data.get('position', None)
         self.label = data.get('label', None)
+        self.point = data.get('point', None)
 

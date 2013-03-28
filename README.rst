@@ -11,3 +11,5 @@ A library to read and write CZML_ files for Cesium_
 czml is continually tested with *Travis CI*
 
 .. image:: https://api.travis-ci.org/cleder/czml.png
+
+https://travis-ci.org/cleder/czml

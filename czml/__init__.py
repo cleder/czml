@@ -16,5 +16,5 @@
 #    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 from .czml import CZML, CZMLPacket
-from .czml import Position, Color, Billboard, Label
+from .czml import Position, Color, Billboard, Label, Point
 

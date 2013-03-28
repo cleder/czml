@@ -184,6 +184,33 @@ class CzmlClassesTestCase( unittest.TestCase ):
         self.assertEqual(pos.data(), pos2.data())
 
 
+    def testPoint(self):
+        point = czml.Point()
+        point.color = {'rgba': [0, 255, 127, 55]}
+        self.assertEqual(point.data(), {'color':
+                {'rgba': [0, 255, 127, 55]},
+                'show': False})
+        point.outlineColor = {'rgbaf': [0.0, 0.255, 0.127, 0.55]}
+        self.assertEqual(point.data(),{'color':
+                    {'rgba': [0, 255, 127, 55]},
+                    'outlineColor': {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
+                    'show': False})
+        point.pixelSize = 10
+        point.outlineWidth = 2
+        point.show = True
+        self.assertEqual(point.data(),{'color':
+                        {'rgba': [0, 255, 127, 55]},
+                    'pixelSize': 10,
+                    'outlineColor':
+                        {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
+                    'outlineWidth': 2,
+                    'show': True})
+        p2 = czml.Point()
+        p2.loads(point.dumps())
+        self.assertEqual(point.data(), p2.data())
+
+
+
     def testLabel(self):
         l = czml.Label()
         l.text = 'test label'
@@ -238,6 +265,14 @@ class CzmlClassesTestCase( unittest.TestCase ):
             'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]}})
         p2.loads(p.dumps())
         self.assertEqual(p.data(), p2.data())
+        p3 = czml.CZMLPacket(id='cde')
+        p3.point = {'color':
+                    {'rgba': [0, 255, 127, 55]},
+                    'show': True}
+        self.assertEqual(p3.data(),{'id': 'cde',
+                                    'point': {'color':
+                                        {'rgba': [0, 255, 127, 55]},
+                                        'show': True}})
         return p
 
     def testCZML(self):
