@@ -24,6 +24,11 @@ try:
 except ImportError:
     import czml
 
+try:
+    from czml import utils
+except ImportError:
+    import utils
+
 from pygeoif import geometry
 
 class BaseClassesTestCase( unittest.TestCase ):
@@ -133,7 +138,6 @@ class BaseClassesTestCase( unittest.TestCase ):
                                         y2k.isoformat(), 0, 1, 2])
 
 
-
     def testScale(self):
         pass
 
@@ -159,6 +163,34 @@ class BaseClassesTestCase( unittest.TestCase ):
         col2 = czml.Color()
         col2.loads(col.dumps())
         self.assertEqual(col.data(), col2.data())
+
+    def test_hexcolor_to_rgba(self):
+        col = '0000'
+        ashex = utils.hexcolor_to_rgba
+        self.assertEqual(ashex(col), (0,0,0,0))
+        col = '0101'
+        self.assertEqual(ashex(col), (0,17,0,17))
+        col = 'f0f0'
+        self.assertEqual(ashex(col), (255, 0, 255, 0))
+        col = 'AABBCCDD'
+        self.assertEqual(ashex(col), (170, 187, 204, 221))
+        col = '3c3c3c'
+        self.assertEqual(ashex(col), (60, 60, 60, 60))
+        col = 'abc'
+        self.assertEqual(ashex(col), (170, 187, 204, 60))
+        col = 'ffFF'
+        self.assertEqual(ashex(col), (255, 255, 255, 255))
+        col = 'ab'
+        self.assertRaises(ValueError, ashex, col)
+        col = 'rgba'
+        self.assertRaises(ValueError, ashex, col)
+        col = 'abcde'
+        self.assertRaises(ValueError, ashex, col)
+        col = ''
+        self.assertRaises(ValueError, ashex, col)
+        col = None
+        self.assertRaises(AttributeError, ashex, col)
+
 
 class CzmlClassesTestCase( unittest.TestCase ):
 
@@ -209,8 +241,6 @@ class CzmlClassesTestCase( unittest.TestCase ):
         p2.loads(point.dumps())
         self.assertEqual(point.data(), p2.data())
 
-
-
     def testLabel(self):
         l = czml.Label()
         l.text = 'test label'
@@ -221,8 +251,6 @@ class CzmlClassesTestCase( unittest.TestCase ):
         l2 = czml.Label()
         l2.loads(l.dumps())
         self.assertEqual(l.data(), l2.data())
-
-
 
     def testBillboard(self):
         bb = czml.Billboard()
@@ -291,7 +319,6 @@ class CzmlClassesTestCase( unittest.TestCase ):
         cz1 = czml.CZML()
         cz1.loads(cz.dumps())
         self.assertEqual(list(cz.data()),list(cz1.data()))
-
 
 
 def test_suite():
