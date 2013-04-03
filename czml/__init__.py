@@ -17,5 +17,6 @@
 
 from .czml import CZML, CZMLPacket
 from .czml import Position, Color, Billboard, Label, Point
+from .czml import VertexPositions, Polyline
 from .utils import hexcolor_to_rgba
 

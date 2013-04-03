@@ -262,10 +262,61 @@ class CzmlClassesTestCase( unittest.TestCase ):
             {'image': 'http://localhost/img.png', 'scale': 0.7,
             'color': {'rgba': [0, 255, 127, 55]},
             'show': True})
-        #bb.color =
         bb2 = czml.Billboard()
         bb2.loads(bb.dumps())
         self.assertEqual(bb.data(), bb2.data())
+
+    def testVertexPositions(self):
+        v = czml.VertexPositions()
+        l = geometry.LineString([(0, 0), (1, 1)])
+        r = geometry.LinearRing([(0, 0), (1, 1), (1, 0), (0, 0)])
+        ext = [(0, 0), (0, 2), (2, 2), (2, 0), (0, 0)]
+        int_1 = [(0.5, 0.25), (1.5, 0.25), (1.5, 1.25), (0.5, 1.25), (0.5, 0.25)]
+        int_2 = [(0.5, 1.25), (1, 1.25), (1, 1.75), (0.5, 1.75), (0.5, 1.25)]
+        p = geometry.Polygon(ext, [int_1, int_2])
+        v.cartesian = l
+        v.cartographicDegrees = r
+        v.cartographicRadians = p
+        self.assertEqual(v.data(),
+            {'cartesian': [0.0, 0.0, 0, 1.0, 1.0, 0],
+            'cartographicRadians':
+            [0.0, 0.0, 0, 0.0, 2.0, 0, 2.0, 2.0, 0, 2.0, 0.0, 0, 0.0, 0.0, 0],
+            'cartographicDegrees':
+            [0.0, 0.0, 0, 1.0, 1.0, 0, 1.0, 0.0, 0, 0.0, 0.0, 0]})
+        v2 = czml.VertexPositions()
+        v2.loads(v.dumps())
+        self.assertEqual(v.data(), v2.data())
+        v.cartesian = None
+        v.cartographicDegrees = None
+        v.cartographicRadians = [0.0, 0.0, .0, 1.0, 1.0, 1.0]
+        self.assertEqual(v.data(),{'cartographicRadians':
+            [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]})
+
+    def testPolyline(self):
+        p = czml.Polyline()
+        p.color = {'rgba': [0, 255, 127, 55]}
+        self.assertEqual(p.data(), {'color':
+                {'rgba': [0, 255, 127, 55]},
+                'show': False})
+        p.outlineColor = {'rgbaf': [0.0, 0.255, 0.127, 0.55]}
+        self.assertEqual(p.data(),{'color':
+                    {'rgba': [0, 255, 127, 55]},
+                    'outlineColor': {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
+                    'show': False})
+        p.width = 10
+        p.outlineWidth = 2
+        p.show = True
+        self.assertEqual(p.data(),{'color':
+                        {'rgba': [0, 255, 127, 55]},
+                    'width': 10,
+                    'outlineColor':
+                        {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
+                    'outlineWidth': 2,
+                    'show': True})
+        p2 = czml.Polyline()
+        p2.loads(p.dumps())
+        self.assertEqual(p.data(), p2.data())
+
 
     def testCZMLPacket(self):
         p = czml.CZMLPacket(id='abc')
@@ -293,7 +344,8 @@ class CzmlClassesTestCase( unittest.TestCase ):
             {'billboard': {'image': 'http://localhost/img.png',
             'scale': 0.7, 'show': True}, 'id': 'abc',
             'label': {'show': False, 'text': 'test label'},
-            'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]}})
+            'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]},
+            })
         p2.loads(p.dumps())
         self.assertEqual(p.data(), p2.data())
         p3 = czml.CZMLPacket(id='cde')
@@ -304,6 +356,28 @@ class CzmlClassesTestCase( unittest.TestCase ):
                                     'point': {'color':
                                         {'rgba': [0, 255, 127, 55]},
                                         'show': True}})
+        p4 = czml.CZMLPacket(id='defg')
+
+        pl = czml.Polyline()
+        pl.color = {'rgba': [0, 255, 127, 55]}
+        pl.width = 10
+        pl.outlineWidth = 2
+        pl.show = True
+        v = czml.VertexPositions()
+        v.cartographicDegrees = [0.0, 0.0, .0, 1.0, 1.0, 1.0]
+        p4.vertexPositions = v
+        p4.polyline = pl
+        self.assertEqual(p4.data(),
+             {'polyline':
+                {'color': {'rgba': [0, 255, 127, 55]},
+                'width': 10,
+                'outlineWidth': 2,
+                'show': True},
+            'id': 'defg',
+            'vertexPositions':
+                {'cartographicDegrees':
+                    [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]}
+            })
         return p
 
     def testCZML(self):

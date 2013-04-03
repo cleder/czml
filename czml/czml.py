@@ -244,7 +244,7 @@ class _Coordinates(object):
     coords = None
 
     def __init__(self, coords):
-        if isinstance(coords, list):
+        if isinstance(coords, (list, tuple)):
             try:
                 float(coords[1])
                 if len(coords) < 3:
@@ -314,6 +314,10 @@ class Position(_DateTimeAware):
             cartographicRadians=None, cartographicDegrees=None,
             epoch=None, nextTime=None, previousTime=None):
         super(Position, self).__init__(epoch, nextTime, previousTime)
+        self.cartesian = cartesian
+        self.cartographicRadians = cartographicRadians
+        self.cartographicDegrees = cartographicDegrees
+        self.referenceFrame = referenceFrame
 
 
     @property
@@ -388,7 +392,6 @@ class Position(_DateTimeAware):
             d['cartographicRadians'] = self.cartographicRadians.data()
         if self.cartesian:
             d['cartesian'] = self.cartesian.data()
-
         return d
 
 
@@ -657,6 +660,38 @@ class Billboard(_CZMLBaseObject):
         self.scale = data.get('scale', None)
         self.color = data.get('color', None)
 
+class _VPositions(object):
+    """ The list of positions [X, Y, Z, X, Y, Z, ...] """
+
+    coords = None
+
+    def __init__(self, coords):
+        if isinstance(coords, (list, tuple)):
+            assert(len(coords) % 3 == 0)
+            assert(len(coords) >= 6)
+            for coord in coords:
+                if isinstance(coord, (int, long, float)):
+                    continue
+                else:
+                    raise ValueError
+            self.coords = coords
+        else:
+            geom = asShape(coords)
+            if isinstance(geom, geometry.Polygon):
+                geom = geom.exterior
+            if isinstance(geom, (geometry.LineString, geometry.LinearRing)):
+                self.coords = []
+                for coord in geom.coords:
+                    if len(coord) == 2:
+                        self.coords += [coord[0], coord[1], 0]
+                    elif len(coord) == 3:
+                        self.coords += coord
+                    else:
+                        raise ValueError
+
+    def data(self):
+        return self.coords
+
 
 class VertexPositions(_CZMLBaseObject):
     """The world-space positions of vertices.
@@ -664,7 +699,99 @@ class VertexPositions(_CZMLBaseObject):
     are used to define polygons, polylines, and other objects attached
     to the object."""
 
-    pass
+    #The reference frame in which cartesian positions are specified.
+    #Possible values are "FIXED" and "INERTIAL".
+    #In addition, the value of this property can be a hash (#) symbol
+    #followed by the ID of another object in the same scope
+    #whose "position" and "orientation" properties define the reference
+    #frame in which this position is defined.
+    #This property is ignored when specifying position with any type
+    #other than cartesian. If this property is not specified,
+    #the default reference frame is "FIXED".
+    referenceFrame = None
+
+    #The list of positions specified as references. Each reference is
+    #to a property that defines a single position,
+    #possible as it changes with time.
+    references = None
+
+    _cartesian = None
+    _cartographicRadians = None
+    _cartographicDegrees = None
+
+
+    def __init__(self, referenceFrame = None,
+            cartesian=None, cartographicRadians=None,
+            cartographicDegrees=None, references=None):
+        self.cartesian = cartesian
+        self.cartographicRadians = cartographicRadians
+        self.cartographicDegrees = cartographicDegrees
+        self.referenceFrame = referenceFrame
+        self.references = references
+
+
+    @property
+    def cartesian(self):
+        """The list of positions represented as Cartesian
+        [X, Y, Z, X, Y, Z, ...] in the meters
+        relative to the referenceFrame.
+        """
+        return self._cartesian
+
+    @cartesian.setter
+    def cartesian(self, geom):
+        if geom is not None:
+            self._cartesian = _VPositions(geom)
+        else:
+            self._cartesian = None
+
+    @property
+    def cartographicDegrees(self):
+        """The list of positions represented as WGS 84
+        [Longitude, Latitude, Height, Longitude, Latitude, Height, ...]
+        where longitude and latitude are in degrees and height is in meters.
+        """
+        return self._cartographicDegrees
+
+    @cartographicDegrees.setter
+    def cartographicDegrees(self, geom):
+        if geom is not None:
+            self._cartographicDegrees = _VPositions(geom)
+        else:
+            self._cartographicDegrees = None
+
+
+    @property
+    def cartographicRadians(self):
+        """The list of positions represented as WGS 84
+        [Longitude, Latitude, Height, Longitude, Latitude, Height, ...]
+        where longitude and latitude are in radians and height is in meters.
+        """
+        return self._cartographicRadians
+
+    @cartographicRadians.setter
+    def cartographicRadians(self, geom):
+        if geom is not None:
+            self._cartographicRadians = _VPositions(geom)
+        else:
+            self._cartographicRadians = None
+
+    def load(self, data):
+        self.cartographicDegrees = data.get('cartographicDegrees', None)
+        self.cartographicRadians = data.get('cartographicRadians', None)
+        self.cartesian = data.get('cartesian', None)
+
+
+    def data(self):
+        d = {}
+        if self.cartographicDegrees:
+            d['cartographicDegrees'] = self.cartographicDegrees.data()
+        if self.cartographicRadians:
+            d['cartographicRadians'] = self.cartographicRadians.data()
+        if self.cartesian:
+            d['cartesian'] = self.cartesian.data()
+        return d
+
 
 
 class Orientation(_CZMLBaseObject):
@@ -785,7 +912,86 @@ class Polyline(_CZMLBaseObject):
     """ A polyline, which is a line in the scene composed of multiple segments.
     The vertices of the polyline are specified by the vertexPositions property.
     """
-    pass
+
+    #Whether or not the polyline is shown.
+    show = False
+
+    _color = None
+    _outlineColor = None
+
+    # The width of the outline of the polyline.
+    outlineWidth = None
+
+    # The width of the polyline.
+    width = None
+
+    @property
+    def color(self):
+        """The color of the polyline."""
+        if self._color is not None:
+            return self._color.data()
+
+    @color.setter
+    def color(self, color):
+        if isinstance(color, Color):
+            self._color = color
+        elif isinstance(color, dict):
+            col = Color()
+            col.load(color)
+            self._color = col
+        elif color is None:
+            self._color = None
+        else:
+            raise TypeError
+
+    @property
+    def outlineColor(self):
+        """The color of the outline of the polyline."""
+        if self._outlineColor is not None:
+            return self._outlineColor.data()
+
+    @outlineColor.setter
+    def outlineColor(self, color):
+        if isinstance(color, Color):
+            self._outlineColor = color
+        elif isinstance(color, dict):
+            col = Color()
+            col.load(color)
+            self._outlineColor = col
+        elif color is None:
+            self._outlineColor = None
+        else:
+            raise TypeError
+
+
+
+
+    def data(self):
+        d = {}
+        if self.show:
+            d['show'] = True
+        if self.show == False:
+            d['show'] = False
+        if self.color:
+            d['color'] = self.color
+        if self.width:
+            d['width'] = self.width
+        if self.outlineColor:
+            d['outlineColor'] = self.outlineColor
+        if self.outlineWidth:
+            d['outlineWidth'] = self.outlineWidth
+
+        return d
+
+    def load(self, data):
+        self.show = data.get('show', None)
+        self.color = data.get('color', None)
+        self.outlineColor = data.get('outlineColor', None)
+        self.width = data.get('width', None)
+        self.outlineWidth = data.get('outlineWidth', None)
+
+
+
 
 class Path(_CZMLBaseObject):
     """A path, which is a polyline defined by the motion of an object over
@@ -856,7 +1062,7 @@ class CZMLPacket(_CZMLBaseObject):
     # The world-space positions of vertices. The vertex positions have no
     # direct visual representation, but they are used to define polygons,
     # polylines, and other objects attached to the object.
-    vertexPositions = None
+    _vertexPositions = None
 
     # The orientation of the object in the world. The orientation has no
     # direct visual representation, but it is used to orient models,
@@ -870,7 +1076,7 @@ class CZMLPacket(_CZMLBaseObject):
     # A polyline, which is a line in the scene composed of multiple segments.
     # The vertices of the polyline are specified by the vertexPositions
     # property.
-    polyline = None
+    _polyline = None
 
     # A path, which is a polyline defined by the motion of an object over
     # time. The possible vertices of the path are specified by the
@@ -993,6 +1199,51 @@ class CZMLPacket(_CZMLBaseObject):
         else:
             raise TypeError
 
+    @property
+    def vertexPositions(self):
+        """The world-space positions of vertices.
+        The vertex positions have no direct visual representation,
+        but they are used to define polygons, polylines,
+        and other objects attached to the object."""
+        if self._vertexPositions is not None:
+            return self._vertexPositions.data()
+
+    @vertexPositions.setter
+    def vertexPositions(self, vpositions):
+        if isinstance(vpositions, VertexPositions):
+            self._vertexPositions = vpositions
+        elif isinstance(vpositions, dict):
+            p = VertexPositions()
+            p.load(vpositions)
+            self._vertexPositions = p
+        elif vpositions is None:
+            self._vertexPositions = None
+        else:
+            raise TypeError
+
+
+    @property
+    def polyline(self):
+        """A polyline, which is a line in the scene composed of multiple segments.
+        The vertices of the polyline are specified by the vertexPositions
+        property."""
+        if self._polyline is not None:
+            return self._polyline.data()
+
+    @polyline.setter
+    def polyline(self, polyline):
+        if isinstance(polyline, Polyline):
+            self._polyline = polyline
+        elif isinstance(polyline, dict):
+            p = Polyline()
+            p.load(polyline)
+            self._polyline = p
+        elif polyline is None:
+            self._polyline = None
+        else:
+            raise TypeError
+
+
 
     def data(self):
         d = {}
@@ -1008,6 +1259,10 @@ class CZMLPacket(_CZMLBaseObject):
             d['label'] = self.label
         if self.point  is not None:
             d['point'] = self.point
+        if self.vertexPositions  is not None:
+            d['vertexPositions'] = self.vertexPositions
+        if self.polyline  is not None:
+            d['polyline'] = self.polyline
         return d
 
 
@@ -1018,4 +1273,6 @@ class CZMLPacket(_CZMLBaseObject):
         self.position = data.get('position', None)
         self.label = data.get('label', None)
         self.point = data.get('point', None)
+        self.vertexPositions = data.get('vertexPositions', None)
+        self.polyline = data.get('polyline', None)
 
