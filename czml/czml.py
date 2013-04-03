@@ -430,7 +430,7 @@ class _Colors(object):
     colors = None
 
     def __init__(self, colors, num=float):
-        if isinstance(colors, list):
+        if isinstance(colors, (list, tuple)):
             if len(colors) == 3:
                 self.colors = [_Color(colors[0], colors[1], colors[2], num=num)]
             elif len(colors) == 4:
@@ -544,7 +544,7 @@ class Scale(_DateTimeAware):
         elements, they are time-tagged samples arranged as
         [Time, Value, Time, Value, ...], where Time is an ISO 8601 date
         and time string or seconds since epoch."""
-        if isinstance(self._number, list):
+        if isinstance(self._number, alist):
             val = []
             for d in grouper(self._number, 2):
                 if isinstance(d[0], (int, long, float)):
@@ -558,7 +558,7 @@ class Scale(_DateTimeAware):
     @number.setter
     def number(self, data):
         self._number = []
-        if isinstance(data, list):
+        if isinstance(data, (list, tuple)):
             if len(data) > 1:
                 for d in grouper(data, 2):
                     v = float(d[1])
