@@ -30,7 +30,7 @@ def hexcolor_to_rgba(color, opacity='3c'):
     elif len(color)==8:
         pass
     else:
-        raise ValueError, "input #%s is not in #RRGGBB[AA] format" % color
+        raise ValueError("input #%s is not in #RRGGBB[AA] format" % color)
     r, g, b, a = color[0:2], color[2:4], color[4:6], color[6:8]
     r, g, b, a = [int(n, 16) for n in (r, g, b, a)]
     return (r, g, b, a)
