@@ -999,11 +999,86 @@ class Path(_CZMLBaseObject):
     property."""
     pass
 
+
+class Material(_CZMLBaseObject):
+    """The material to use to fill the polygon."""
+
+    _color = None
+
+    @property
+    def solidColor(self):
+        if self._color is not None:
+            return self._color
+
+    @solidColor.setter
+    def solidColor(self, color):
+        if isinstance(color, Color):
+            self._color = color
+        elif isinstance(color, dict):
+            col = Color()
+            col.load(color)
+            self._color = col
+        elif color is None:
+            self._color = None
+        else:
+            raise TypeError
+
+
+
+    def data(self):
+        d = {}
+        if self.solidColor is not None:
+            d['solidColor'] = {'color': self.solidColor.data()}
+        return d
+
+    def load(self, data):
+        sc = data.get('solidColor', None)
+        if sc:
+            self.solidColor = sc.get('color', None)
+
+
+
+
 class Polygon(_CZMLBaseObject):
     """A polygon, which is a closed figure on the surface of the Earth.
     The vertices of the polygon are specified by the vertexPositions property.
     """
-    pass
+    show = False
+    _material = None
+
+
+    def __init__(self, color=None, image=None):
+        if color:
+            self.material = {"solidColor":{"color": color}}
+
+    @property
+    def material(self):
+        if self._material is not None:
+            return self._material
+
+    @material.setter
+    def material(self, material):
+        if isinstance(material, Material):
+            self._material = material
+        elif isinstance(material, dict):
+            m = Material()
+            m.load(material)
+            self._material = m
+        elif material is None:
+            self._material = None
+        else:
+            raise TypeError
+
+    def data(self):
+        d = {}
+        if self.material is not None:
+            d['material'] = self.material.data()
+        return d
+
+    def load(self, data):
+        self.material = data.get('material', None)
+
+
 
 class Cone(_CZMLBaseObject):
     """ A cone starts at a point or apex and extends in a circle of
@@ -1086,7 +1161,7 @@ class CZMLPacket(_CZMLBaseObject):
     # A polygon, which is a closed figure on the surface of the Earth.
     # The vertices of the polygon are specified by the vertexPositions
     # property.
-    polygon = None
+    _polygon = None
 
     # A cone. A cone starts at a point or apex and extends in a circle of
     # directions which all have the same angular separation from the Z-axis
@@ -1243,6 +1318,28 @@ class CZMLPacket(_CZMLBaseObject):
         else:
             raise TypeError
 
+    @property
+    def polygon(self):
+        """A polygon, which is a closed figure on the surface of the Earth.
+        The vertices of the polygon are specified by the vertexPositions
+        property."""
+
+        if self._polygon is not None:
+            return self._polygon.data()
+
+    @polygon.setter
+    def polygon(self, polygon):
+        if isinstance(polygon, Polygon):
+            self._polygon = polygon
+        elif isinstance(polygon, dict):
+            p = Polygon()
+            p.load(polygon)
+            self._polygon = p
+        elif polygon is None:
+            self._polygon = None
+        else:
+            raise TypeError
+
 
 
     def data(self):
@@ -1263,6 +1360,8 @@ class CZMLPacket(_CZMLBaseObject):
             d['vertexPositions'] = self.vertexPositions
         if self.polyline  is not None:
             d['polyline'] = self.polyline
+        if self.polygon  is not None:
+            d['polygon'] = self.polygon
         return d
 
 
@@ -1275,4 +1374,5 @@ class CZMLPacket(_CZMLBaseObject):
         self.point = data.get('point', None)
         self.vertexPositions = data.get('vertexPositions', None)
         self.polyline = data.get('polyline', None)
+        self.polygon = data.get('polygon', None)
 

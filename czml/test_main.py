@@ -318,6 +318,24 @@ class CzmlClassesTestCase( unittest.TestCase ):
         self.assertEqual(p.data(), p2.data())
 
 
+    def testPolygon(self):
+        p = czml.Polygon()
+        m = czml.Material()
+        m.solidColor = {'rgba': [0, 255, 127, 55]}
+        p.material = m
+        self.assertEqual(p.data(),
+            {'material':
+                {'solidColor':
+                    {'color': {'rgba': [0, 255, 127, 55]}}
+            }   }
+            )
+        p2 = czml.Polygon()
+        p2.loads(p.dumps())
+        self.assertEqual(p.data(), p2.data())
+        p3 = czml.Polygon(color = {'rgba': [0, 255, 127, 55]})
+        self.assertEqual(p.data(), p3.data())
+
+
     def testCZMLPacket(self):
         p = czml.CZMLPacket(id='abc')
         self.assertEqual(p.dumps(), '{"id": "abc"}')
@@ -356,6 +374,9 @@ class CzmlClassesTestCase( unittest.TestCase ):
                                     'point': {'color':
                                         {'rgba': [0, 255, 127, 55]},
                                         'show': True}})
+        p32 = czml.CZMLPacket(id='abc')
+        p32.loads(p3.dumps())
+        self.assertEqual(p3.data(), p32.data())
         p4 = czml.CZMLPacket(id='defg')
 
         pl = czml.Polyline()
@@ -378,6 +399,26 @@ class CzmlClassesTestCase( unittest.TestCase ):
                 {'cartographicDegrees':
                     [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]}
             })
+        p42 = czml.CZMLPacket(id='abc')
+        p42.loads(p4.dumps())
+        self.assertEqual(p4.data(), p42.data())
+        p5 = czml.CZMLPacket(id='efgh')
+        p5.vertexPositions = v
+        poly = czml.Polygon(color = {'rgba': [0, 255, 127, 55]})
+        p5.polygon = poly
+        self.assertEqual(p5.data(),
+            {'polygon':
+                {'material':
+                    {'solidColor':
+                        {'color':
+                            {'rgba': [0, 255, 127, 55]}}}},
+                    'id': 'efgh',
+                    'vertexPositions':
+                        {'cartographicDegrees':
+                            [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]}})
+        p52 = czml.CZMLPacket(id='abc')
+        p52.loads(p5.dumps())
+        self.assertEqual(p5.data(), p52.data())
         return p
 
     def testCZML(self):
