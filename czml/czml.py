@@ -474,6 +474,13 @@ class Color(_DateTimeAware):
     _rgba = None
     _rgbaf = None
 
+    def __init__(self, rgba= None, rgbaf=None,
+            epoch=None, nextTime=None, previousTime=None):
+        super(Color, self).__init__(epoch, nextTime, previousTime)
+        self.rgba = rgba
+        self.rgbaf = rgbaf
+
+
     @property
     def rgba(self):
         """The color specified as an array of color components
@@ -606,6 +613,13 @@ class Billboard(_CZMLBaseObject):
     _color = None
 
     scale = None
+
+    def __init__(self, color=None, image=None, scale=None):
+        self.image = image
+        self.color = color
+        self.scale = scale
+
+
 
     @property
     def color(self):
@@ -815,6 +829,15 @@ class Point(_CZMLBaseObject):
     # The size of the point, in pixels.
     pixelSize = None
 
+    def __init__(self, show=False, color=None, pixelSize=None,
+                outlineColor=None, outlineWidth=None):
+        self.show = show
+        self.color = color
+        self.pixelSize = pixelSize
+        self.outlineColor = outlineColor
+        self.outlineWidth = outlineWidth
+
+
     @property
     def color(self):
         """ The color of the point."""
@@ -924,6 +947,16 @@ class Polyline(_CZMLBaseObject):
 
     # The width of the polyline.
     width = None
+
+    def __init__(self, show=False, color=None, width=None,
+                outlineColor=None, outlineWidth=None):
+        self.show = show
+        self.color = color
+        self.width = width
+        self.outlineColor = outlineColor
+        self.outlineWidth = outlineWidth
+
+
 
     @property
     def color(self):
