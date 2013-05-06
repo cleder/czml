@@ -53,34 +53,38 @@ def grouper(iterable, n, fillvalue=None):
     return izip_longest(*args, fillvalue=fillvalue)
 
 
-def material_property(name):
-    """Returns a material property property function that checks to be sure
-    the value being assigned is a material before assigning it to a hidden
-    variable defined by "_" + name.
+def class_property(cls, name):
+    """Returns a property function that checks to be sure
+    the value being assigned is a certain class before assigning it to a hidden
+    variable defined by "_" + name.  Also transparently returns the data()
+    method when the object value is requested.
     """
 
     @property
-    def material(self):
+    def getter(self):
         val = getattr(self, '_' + name)
         if val is not None:
-            return val.data()
+            return val
 
-    @material.setter
-    def material(self, material):
+    @getter.setter
+    def getter(self, val):
         hidden_attribute = '_' + name
-        if isinstance(material, Material):
-            setattr(self, hidden_attribute, material)
-        elif isinstance(material, dict):
-            m = Material()
-            m.load(material)
+        if isinstance(val, cls):
+            setattr(self, hidden_attribute, val)
+        elif isinstance(val, dict):
+            m = cls()
+            m.load(val)
             setattr(self, hidden_attribute, m)
-        elif material is None:
+        elif val is None:
             setattr(self, hidden_attribute, None)
         else:
-            raise TypeError
+            raise TypeError('Property %s must be of class %s. %s was provided.' %
+                            (name, cls.__name__, val.__class__.__name__))
 
-    return material
+    return getter
 
+# We make lots of material properties.
+material_property = lambda x: class_property(Material, x)
 
 class _CZMLBaseObject(object):
 
@@ -156,7 +160,7 @@ class _DateTimeAware(_CZMLBaseObject):
         """ Specifies the epoch to use for times specifies as seconds
         since an epoch. """
         if self._epoch:
-            return self._epoch.isoformat()
+            return self._epoch.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
     @epoch.setter
     def epoch(self, dt):
@@ -424,6 +428,61 @@ class Position(_DateTimeAware):
         return d
 
 
+class Radii(_DateTimeAware):
+    """ Radii is in support of ellipsoids.  This class is nearly an identical
+    copy of the Position class since its behavior is almost the same.
+    """
+
+
+    # The reference frame in which cartesian positions are specified.
+    # Possible values are "FIXED" and "INERTIAL". In addition, the value
+    # of this property can be a hash (#) symbol followed by the ID of
+    # another object in the same scope whose "position" and "orientation"
+    # properties define the reference frame in which this position is defined.
+    # This property is ignored when specifying position with any type other
+    # than cartesian. If this property is not specified,
+    # the default reference frame is "FIXED".
+    referenceFrame = None
+
+    _cartesian = None
+
+
+    def __init__(self, referenceFrame=None, cartesian=None,
+            cartographicRadians=None, cartographicDegrees=None,
+            epoch=None, nextTime=None, previousTime=None):
+        super(Radii, self).__init__(epoch, nextTime, previousTime)
+        self.cartesian = cartesian
+        self.referenceFrame = referenceFrame
+
+
+    @property
+    def cartesian(self):
+        """ The position represented as a Cartesian [X, Y, Z] in the meters
+        relative to the referenceFrame. If the array has three elements,
+        the position is constant. If it has four or more elements, they
+        are time-tagged samples arranged as
+        [Time, X, Y, Z, Time, X, Y, Z, Time, X, Y, Z, ...],
+        where Time is an ISO 8601 date and time string or seconds since epoch.
+        """
+        return self._cartesian
+
+    @cartesian.setter
+    def cartesian(self, geom):
+        if geom is not None:
+            self._cartesian = _Coordinates(geom)
+        else:
+            self._cartesian = None
+
+    def load(self, data):
+        super(Radii, self).load(data)
+        self.cartesian = data.get('cartesian', None)
+
+
+    def data(self):
+        d = super(Radii, self).data()
+        if self.cartesian:
+            d['cartesian'] = self.cartesian.data()
+        return d
 
 
 class _Color(object):
@@ -964,6 +1023,9 @@ class Label(_CZMLBaseObject):
 
     text = None
     show = False
+    horizontalOrigin = None
+    scale = None
+    pixelOffset = None
 
     def __init__(self, text=None, show=False):
         self.text = text
@@ -977,6 +1039,12 @@ class Label(_CZMLBaseObject):
             d['show'] = False
         if self.text:
             d['text'] = self.text
+        if self.horizontalOrigin:
+            d['horizontalOrigin'] = self.horizontalOrigin
+        if self.scale:
+            d['scale'] = self.scale
+        if self.pixelOffset:
+            d['pixelOffset'] = self.pixelOffset
         return d
 
     def load(self, data):
@@ -1077,14 +1145,47 @@ class Polyline(_CZMLBaseObject):
         self.outlineWidth = data.get('outlineWidth', None)
 
 
-
-
 class Path(_CZMLBaseObject):
     """A path, which is a polyline defined by the motion of an object over
     time. The possible vertices of the path are specified by the position
     property."""
-    pass
 
+    show = None
+
+    _color = None
+    color = class_property(Color, 'color')
+
+    resolution = None
+    outlineWidth = None
+    leadTime = None
+    trailTime = None
+    width = None
+
+    _position = None
+    position = class_property(Position, 'position')
+
+    _properties = ('show', 'color', 'resolution', 'outlineWidth', 'leadTime',
+                    'trailTime', 'position', 'width')
+
+
+    def __init__(self, **kwargs):
+
+        for k, v in kwargs.iteritems():
+            if k in self._properties:
+                setattr(self, k, v)
+            else:
+                raise ValueError('Key word %s not known' % k)
+
+    def data(self):
+        d = {}
+        for attr in self._properties:
+            a = getattr(self, attr)
+            if a is not None:
+                if isinstance(a, _CZMLBaseObject):
+                    d[attr] = a.data()
+                else:
+                    d[attr] = a
+        return d
 
 class Material(_CZMLBaseObject):
     """The material to use to fill the polygon."""
@@ -1164,6 +1265,29 @@ class Polygon(_CZMLBaseObject):
     def load(self, data):
         self.material = data.get('material', None)
 
+class Ellipsoid(_DateTimeAware, _CZMLBaseObject):
+    show = True
+    _radii = None
+    _material = None
+
+    material = material_property('material')
+    radii = class_property(Radii, 'radii')
+
+    def data(self):
+        d = super(Ellipsoid, self).data()
+
+        for attr in ('show', 'material', 'radii'):
+            a = getattr(self, attr)
+            if a is not None:
+                if isinstance(a, _CZMLBaseObject):
+                    d[attr] = a.data()
+                else:
+                    d[attr] = a
+        return d
+
+    def load(self, data):
+        self.material = data.get('material', None)
+        self.radii = data.get('radii', None)
 
 class Cone(_DateTimeAware, _CZMLBaseObject):
     """ A cone starts at a point or apex and extends in a circle of
@@ -1196,7 +1320,7 @@ class Cone(_DateTimeAware, _CZMLBaseObject):
     outerMaterial = material_property('outerMaterial')
     silhouetteMaterial = material_property('silhouetteMaterial')
 
-    assignables = ('show', 'innerHalfAngle', 'outerHalfAngle', 'radius',
+    _properties = ('show', 'innerHalfAngle', 'outerHalfAngle', 'radius',
                    'minimumClockAngle', 'maximumClockAngle',
                    'showIntersection', 'intersectionColor',
                    'capMaterial', 'innerMaterial', 'outerMaterial',
@@ -1208,7 +1332,7 @@ class Cone(_DateTimeAware, _CZMLBaseObject):
                                 nextTime=nextTime,
                                 previousTime=previousTime)
         for param in kwargs:
-            if param in self.assignables:
+            if param in self._properties:
                 setattr(self, param, kwargs[param])
             else:
                 raise ValueError('Unknown parameter: %s', param)
@@ -1217,10 +1341,13 @@ class Cone(_DateTimeAware, _CZMLBaseObject):
         d = _DateTimeAware.data(self)
         d['show'] = self.show
 
-        for attr in self.assignables:
+        for attr in self._properties:
             a = getattr(self, attr)
             if a is not None:
-                d[attr] = a
+                if isinstance(a, _CZMLBaseObject):
+                    d[attr] = a.data()
+                else:
+                    d[attr] = a
 
             # TODO: Finish entering these.
         return d
@@ -1238,7 +1365,6 @@ class Pyramid(_CZMLBaseObject):
 class Camera(_CZMLBaseObject):
     """A camera."""
     pass
-
 
 
 class CZMLPacket(_CZMLBaseObject):
@@ -1316,13 +1442,16 @@ class CZMLPacket(_CZMLBaseObject):
     # A camera.
     camera = None
 
-
+    # An ellipsoid
+    _ellipsoid = None
 
 
     def __init__(self, id=None, availability=None):
         self.id = id
         self.availability = availability
 
+    # Ensure ellipsoids are Ellipsoid objects and handle them appropriately.
+    ellipsoid = class_property(Ellipsoid, 'ellipsoid')
 
     @property
     def position(self):
@@ -1522,8 +1651,8 @@ class CZMLPacket(_CZMLBaseObject):
         d = {}
         if self.id:
             d['id'] = self.id
-        # if self.availability is not None:
-        #    d['availability'] = self.availability
+        if self.availability is not None:
+            d['availability'] = self.availability
         if self.billboard is not None:
             d['billboard'] = self.billboard
         if self.position is not None:
@@ -1542,6 +1671,10 @@ class CZMLPacket(_CZMLBaseObject):
             d['polygon'] = self.polygon
         if self.cone is not None:
             d['cone'] = self.cone
+        if self.path is not None:
+            d['path'] = self.path.data()
+        if self.ellipsoid is not None:
+            d['ellipsoid'] = self.ellipsoid.data()
         return d
 
 
