@@ -53,6 +53,39 @@ def grouper(iterable, n, fillvalue=None):
     return izip_longest(*args, fillvalue=fillvalue)
 
 
+def class_property(cls, name):
+    """Returns a property function that checks to be sure
+    the value being assigned is a certain class before assigning it to a hidden
+    variable defined by "_" + name.  Also transparently returns the data()
+    method when the object value is requested.
+    """
+
+    @property
+    def getter(self):
+        val = getattr(self, '_' + name)
+        if val is not None:
+            return val
+
+    @getter.setter
+    def getter(self, val):
+        hidden_attribute = '_' + name
+        if isinstance(val, cls):
+            setattr(self, hidden_attribute, val)
+        elif isinstance(val, dict):
+            m = cls()
+            m.load(val)
+            setattr(self, hidden_attribute, m)
+        elif val is None:
+            setattr(self, hidden_attribute, None)
+        else:
+            raise TypeError('Property %s must be of class %s. %s was provided.' %
+                            (name, cls.__name__, val.__class__.__name__))
+
+    return getter
+
+# We make lots of material properties.
+material_property = lambda x: class_property(Material, x)
+
 class _CZMLBaseObject(object):
 
     def dumps(self):
@@ -127,13 +160,13 @@ class _DateTimeAware(_CZMLBaseObject):
         """ Specifies the epoch to use for times specifies as seconds
         since an epoch. """
         if self._epoch:
-            return self._epoch.isoformat()
+            return self._epoch.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
     @epoch.setter
     def epoch(self, dt):
         if dt is None:
             self._epoch = None
-        elif isinstance(dt, (date,datetime)):
+        elif isinstance(dt, (date, datetime)):
             self._epoch = dt
         elif isinstance(dt, basestring):
             self._epoch = dateutil.parser.parse(dt)
@@ -146,7 +179,7 @@ class _DateTimeAware(_CZMLBaseObject):
         either an ISO 8601 date and time string or as seconds since epoch.
         This property is used to determine if there is a gap between samples
         specified in different packets."""
-        if isinstance(self._nextTime, (date,datetime)):
+        if isinstance(self._nextTime, (date, datetime)):
             return self._nextTime.isoformat()
         elif isinstance(self._nextTime, (int, long, float)):
             return self._nextTime
@@ -155,7 +188,7 @@ class _DateTimeAware(_CZMLBaseObject):
     def nextTime(self, dt):
         if dt is None:
             self._nextTime = None
-        elif isinstance(dt, (date,datetime)):
+        elif isinstance(dt, (date, datetime)):
             self._nextTime = dt
         elif isinstance(dt, (int, long, float)):
             self._nextTime = dt
@@ -174,7 +207,7 @@ class _DateTimeAware(_CZMLBaseObject):
         as either an ISO 8601 date and time string or as seconds since epoch.
         This property is used to determine if there is a gap between samples
         specified in different packets."""
-        if isinstance(self._previousTime, (date,datetime)):
+        if isinstance(self._previousTime, (date, datetime)):
             return self._previousTime.isoformat()
         elif isinstance(self._previousTime, (int, long, float)):
             return self._previousTime
@@ -183,7 +216,7 @@ class _DateTimeAware(_CZMLBaseObject):
     def previousTime(self, dt):
         if dt is None:
             self._previousTime = None
-        elif isinstance(dt, (date,datetime)):
+        elif isinstance(dt, (date, datetime)):
             self._previousTime = dt
         elif isinstance(dt, (int, long, float)):
             self._previousTime = dt
@@ -226,7 +259,7 @@ class _Coordinate(object):
         self.z = float(z)
         if t is None:
             self.t = None
-        elif isinstance(t, (date,datetime)):
+        elif isinstance(t, (date, datetime)):
             self.t = t
         elif isinstance(t, (int, long, float)):
             self.t = float(t)
@@ -273,7 +306,7 @@ class _Coordinates(object):
         d = []
         if self.coords:
             for coord in self.coords:
-                if isinstance(coord.t, (date,datetime)):
+                if isinstance(coord.t, (date, datetime)):
                      d.append(coord.t.isoformat())
                 elif coord.t is None:
                     pass
@@ -310,7 +343,7 @@ class Position(_DateTimeAware):
     _cartographicDegrees = None
 
 
-    def __init__(self, referenceFrame= None, cartesian=None,
+    def __init__(self, referenceFrame=None, cartesian=None,
             cartographicRadians=None, cartographicDegrees=None,
             epoch=None, nextTime=None, previousTime=None):
         super(Position, self).__init__(epoch, nextTime, previousTime)
@@ -395,6 +428,61 @@ class Position(_DateTimeAware):
         return d
 
 
+class Radii(_DateTimeAware):
+    """ Radii is in support of ellipsoids.  This class is nearly an identical
+    copy of the Position class since its behavior is almost the same.
+    """
+
+
+    # The reference frame in which cartesian positions are specified.
+    # Possible values are "FIXED" and "INERTIAL". In addition, the value
+    # of this property can be a hash (#) symbol followed by the ID of
+    # another object in the same scope whose "position" and "orientation"
+    # properties define the reference frame in which this position is defined.
+    # This property is ignored when specifying position with any type other
+    # than cartesian. If this property is not specified,
+    # the default reference frame is "FIXED".
+    referenceFrame = None
+
+    _cartesian = None
+
+
+    def __init__(self, referenceFrame=None, cartesian=None,
+            cartographicRadians=None, cartographicDegrees=None,
+            epoch=None, nextTime=None, previousTime=None):
+        super(Radii, self).__init__(epoch, nextTime, previousTime)
+        self.cartesian = cartesian
+        self.referenceFrame = referenceFrame
+
+
+    @property
+    def cartesian(self):
+        """ The position represented as a Cartesian [X, Y, Z] in the meters
+        relative to the referenceFrame. If the array has three elements,
+        the position is constant. If it has four or more elements, they
+        are time-tagged samples arranged as
+        [Time, X, Y, Z, Time, X, Y, Z, Time, X, Y, Z, ...],
+        where Time is an ISO 8601 date and time string or seconds since epoch.
+        """
+        return self._cartesian
+
+    @cartesian.setter
+    def cartesian(self, geom):
+        if geom is not None:
+            self._cartesian = _Coordinates(geom)
+        else:
+            self._cartesian = None
+
+    def load(self, data):
+        super(Radii, self).load(data)
+        self.cartesian = data.get('cartesian', None)
+
+
+    def data(self):
+        d = super(Radii, self).data()
+        if self.cartesian:
+            d['cartesian'] = self.cartesian.data()
+        return d
 
 
 class _Color(object):
@@ -408,7 +496,7 @@ class _Color(object):
         self.a = num(a)
         if t is None:
             self.t = None
-        elif isinstance(t, (date,datetime)):
+        elif isinstance(t, (date, datetime)):
             self.t = t
         elif isinstance(t, (int, long, float)):
             self.t = float(t)
@@ -444,7 +532,7 @@ class _Colors(object):
                 self.colors = []
                 for color in grouper(colors, 5):
                     self.colors.append(_Color(color[1], color[2],
-                                            color[3], color[4] ,color[0], num=num))
+                                            color[3], color[4] , color[0], num=num))
             else:
                 raise ValueError
         elif colors is None:
@@ -456,7 +544,7 @@ class _Colors(object):
         d = []
         if self.colors:
             for color in self.colors:
-                if isinstance(color.t, (date,datetime)):
+                if isinstance(color.t, (date, datetime)):
                      d.append(color.t.isoformat())
                 elif color.t is None:
                     pass
@@ -474,7 +562,7 @@ class Color(_DateTimeAware):
     _rgba = None
     _rgbaf = None
 
-    def __init__(self, rgba= None, rgbaf=None,
+    def __init__(self, rgba=None, rgbaf=None,
             epoch=None, nextTime=None, previousTime=None):
         super(Color, self).__init__(epoch, nextTime, previousTime)
         self.rgba = rgba
@@ -573,7 +661,7 @@ class Scale(_DateTimeAware):
                 for d in grouper(data, 2):
                     v = float(d[1])
                     t = d[0]
-                    if isinstance(t, (date,datetime)):
+                    if isinstance(t, (date, datetime)):
                        t = t
                     elif isinstance(t, (int, long, float)):
                         t = float(t)
@@ -584,7 +672,7 @@ class Scale(_DateTimeAware):
                             t = dateutil.parser.parse(t)
                     else:
                         raise ValueError
-                    self._number.append((t,v))
+                    self._number.append((t, v))
             else:
                 self._number = float(data[0])
         else:
@@ -642,17 +730,17 @@ class Billboard(_CZMLBaseObject):
         else:
             raise TypeError
 
-    #@property
-    #def scale(self):
-        #"""The scale of the billboard. The scale is multiplied with the
-        #pixel size of the billboard's image. For example, if the scale is
-        #2.0, the billboard will be rendered with twice the number of pixels,
-        #in each direction, of the image."""
-        #return self._scale
+    # @property
+    # def scale(self):
+        # """The scale of the billboard. The scale is multiplied with the
+        # pixel size of the billboard's image. For example, if the scale is
+        # 2.0, the billboard will be rendered with twice the number of pixels,
+        # in each direction, of the image."""
+        # return self._scale
 
-    #@scale.setter
-    #def scale(self, data):
-        #self._scale = Scale(data)
+    # @scale.setter
+    # def scale(self, data):
+        # self._scale = Scale(data)
 
     def data(self):
         d = {}
@@ -662,7 +750,7 @@ class Billboard(_CZMLBaseObject):
             d['show'] = False
         if self.image:
             d['image'] = self.image
-        if self.scale: #XXX
+        if self.scale:  # XXX
             d['scale'] = self.scale
         if self.color is not None:
             d['color'] = self.color
@@ -713,20 +801,20 @@ class VertexPositions(_CZMLBaseObject):
     are used to define polygons, polylines, and other objects attached
     to the object."""
 
-    #The reference frame in which cartesian positions are specified.
-    #Possible values are "FIXED" and "INERTIAL".
-    #In addition, the value of this property can be a hash (#) symbol
-    #followed by the ID of another object in the same scope
-    #whose "position" and "orientation" properties define the reference
-    #frame in which this position is defined.
-    #This property is ignored when specifying position with any type
-    #other than cartesian. If this property is not specified,
-    #the default reference frame is "FIXED".
+    # The reference frame in which cartesian positions are specified.
+    # Possible values are "FIXED" and "INERTIAL".
+    # In addition, the value of this property can be a hash (#) symbol
+    # followed by the ID of another object in the same scope
+    # whose "position" and "orientation" properties define the reference
+    # frame in which this position is defined.
+    # This property is ignored when specifying position with any type
+    # other than cartesian. If this property is not specified,
+    # the default reference frame is "FIXED".
     referenceFrame = None
 
-    #The list of positions specified as references. Each reference is
-    #to a property that defines a single position,
-    #possible as it changes with time.
+    # The list of positions specified as references. Each reference is
+    # to a property that defines a single position,
+    # possible as it changes with time.
     references = None
 
     _cartesian = None
@@ -734,7 +822,7 @@ class VertexPositions(_CZMLBaseObject):
     _cartographicDegrees = None
 
 
-    def __init__(self, referenceFrame = None,
+    def __init__(self, referenceFrame=None,
             cartesian=None, cartographicRadians=None,
             cartographicDegrees=None, references=None):
         self.cartesian = cartesian
@@ -808,12 +896,36 @@ class VertexPositions(_CZMLBaseObject):
 
 
 
-class Orientation(_CZMLBaseObject):
+class Orientation(_DateTimeAware, _CZMLBaseObject):
     """The orientation of the object in the world.
     The orientation has no direct visual representation, but it is used
-    to orient models, cones, and pyramids attached to the object."""
+    to orient models, cones, and pyramids attached to the object.
 
-    pass
+    https://github.com/AnalyticalGraphicsInc/cesium/wiki/CZML-Content#orientation
+
+    """
+
+    _unitQuaternion = None
+    _axes = None
+
+    def __init__(self, axes=None, unitQuaternion=None, color=None):
+        self.axes = axes
+        self.unitQuaternion = unitQuaternion
+
+    def data(self):
+        d = super(Orientation, self).data()
+        if self.axes:
+            d['axes'] = self.axes
+        if self.unitQuaternion:
+            d['unitQuaternion'] = self.unitQuaternion
+        return d
+
+    def load(self, kws):
+        if 'axis' in kws:
+            d['axis'] = kws['axis']
+        if 'unitQuaternion' in kws:
+            d['unitQuaternion'] = kws['unitQuaternion']
+
 
 class Point(_CZMLBaseObject):
     """A point, or viewport-aligned circle.
@@ -911,6 +1023,9 @@ class Label(_CZMLBaseObject):
 
     text = None
     show = False
+    horizontalOrigin = None
+    scale = None
+    pixelOffset = None
 
     def __init__(self, text=None, show=False):
         self.text = text
@@ -924,6 +1039,12 @@ class Label(_CZMLBaseObject):
             d['show'] = False
         if self.text:
             d['text'] = self.text
+        if self.horizontalOrigin:
+            d['horizontalOrigin'] = self.horizontalOrigin
+        if self.scale:
+            d['scale'] = self.scale
+        if self.pixelOffset:
+            d['pixelOffset'] = self.pixelOffset
         return d
 
     def load(self, data):
@@ -936,7 +1057,7 @@ class Polyline(_CZMLBaseObject):
     The vertices of the polyline are specified by the vertexPositions property.
     """
 
-    #Whether or not the polyline is shown.
+    # Whether or not the polyline is shown.
     show = False
 
     _color = None
@@ -1024,14 +1145,47 @@ class Polyline(_CZMLBaseObject):
         self.outlineWidth = data.get('outlineWidth', None)
 
 
-
-
 class Path(_CZMLBaseObject):
     """A path, which is a polyline defined by the motion of an object over
     time. The possible vertices of the path are specified by the position
     property."""
-    pass
 
+    show = None
+
+    _color = None
+    color = class_property(Color, 'color')
+
+    resolution = None
+    outlineWidth = None
+    leadTime = None
+    trailTime = None
+    width = None
+
+    _position = None
+    position = class_property(Position, 'position')
+
+    _properties = ('show', 'color', 'resolution', 'outlineWidth', 'leadTime',
+                    'trailTime', 'position', 'width')
+
+
+    def __init__(self, **kwargs):
+
+        for k, v in kwargs.iteritems():
+            if k in self._properties:
+                setattr(self, k, v)
+            else:
+                raise ValueError('Key word %s not known' % k)
+
+    def data(self):
+        d = {}
+        for attr in self._properties:
+            a = getattr(self, attr)
+            if a is not None:
+                if isinstance(a, _CZMLBaseObject):
+                    d[attr] = a.data()
+                else:
+                    d[attr] = a
+        return d
 
 class Material(_CZMLBaseObject):
     """The material to use to fill the polygon."""
@@ -1111,9 +1265,31 @@ class Polygon(_CZMLBaseObject):
     def load(self, data):
         self.material = data.get('material', None)
 
+class Ellipsoid(_DateTimeAware, _CZMLBaseObject):
+    show = True
+    _radii = None
+    _material = None
 
+    material = material_property('material')
+    radii = class_property(Radii, 'radii')
 
-class Cone(_CZMLBaseObject):
+    def data(self):
+        d = super(Ellipsoid, self).data()
+
+        for attr in ('show', 'material', 'radii'):
+            a = getattr(self, attr)
+            if a is not None:
+                if isinstance(a, _CZMLBaseObject):
+                    d[attr] = a.data()
+                else:
+                    d[attr] = a
+        return d
+
+    def load(self, data):
+        self.material = data.get('material', None)
+        self.radii = data.get('radii', None)
+
+class Cone(_DateTimeAware, _CZMLBaseObject):
     """ A cone starts at a point or apex and extends in a circle of
     directions which all have the same angular separation from the Z-axis
     of the object to which the cone is attached. The cone may be capped
@@ -1122,7 +1298,61 @@ class Cone(_CZMLBaseObject):
     point of the cone is defined by the position property and extends in
     the direction of the Z-axis as defined by the orientation property.
     """
-    pass
+    show = True
+    innerHalfAngle = None
+    outerHalfAngle = None
+    radius = None
+
+    minimumClockAngle = None
+    maximumClockAngle = None
+
+    showIntersection = None
+    intersectionColor = None
+
+    # Materials
+    _capMaterial = None
+    _innerMaterial = None
+    _outerMaterial = None
+    _silhouetteMaterial = None
+
+    capMaterial = material_property('capMaterial')
+    innerMaterial = material_property('innerMaterial')
+    outerMaterial = material_property('outerMaterial')
+    silhouetteMaterial = material_property('silhouetteMaterial')
+
+    _properties = ('show', 'innerHalfAngle', 'outerHalfAngle', 'radius',
+                   'minimumClockAngle', 'maximumClockAngle',
+                   'showIntersection', 'intersectionColor',
+                   'capMaterial', 'innerMaterial', 'outerMaterial',
+                   'silhouetteMaterial')
+
+    def __init__(self, epoch=None, nextTime=None, previousTime=None, **kwargs):
+
+        _DateTimeAware.__init__(self, epoch=epoch,
+                                nextTime=nextTime,
+                                previousTime=previousTime)
+        for param in kwargs:
+            if param in self._properties:
+                setattr(self, param, kwargs[param])
+            else:
+                raise ValueError('Unknown parameter: %s', param)
+
+    def data(self):
+        d = _DateTimeAware.data(self)
+        d['show'] = self.show
+
+        for attr in self._properties:
+            a = getattr(self, attr)
+            if a is not None:
+                if isinstance(a, _CZMLBaseObject):
+                    d[attr] = a.data()
+                else:
+                    d[attr] = a
+
+            # TODO: Finish entering these.
+        return d
+
+
 
 class Pyramid(_CZMLBaseObject):
     """A pyramid starts at a point or apex and extends in a specified list
@@ -1135,7 +1365,6 @@ class Pyramid(_CZMLBaseObject):
 class Camera(_CZMLBaseObject):
     """A camera."""
     pass
-
 
 
 class CZMLPacket(_CZMLBaseObject):
@@ -1175,7 +1404,7 @@ class CZMLPacket(_CZMLBaseObject):
     # The orientation of the object in the world. The orientation has no
     # direct visual representation, but it is used to orient models,
     # cones, and pyramids attached to the object.
-    orientation = None
+    _orientation = None
 
     _point = None
 
@@ -1203,7 +1432,7 @@ class CZMLPacket(_CZMLBaseObject):
     # part of a complete cone defined by clock angle limits. The apex point
     # of the cone is defined by the position property and extends in the
     # direction of the Z-axis as defined by the orientation property.
-    cone = None
+    _cone = None
 
     # A pyramid. A pyramid starts at a point or apex and extends in a
     # specified list of directions from the apex. Each pair of directions
@@ -1213,13 +1442,16 @@ class CZMLPacket(_CZMLBaseObject):
     # A camera.
     camera = None
 
+    # An ellipsoid
+    _ellipsoid = None
 
 
-
-    def __init__(self, id=None, availability = None):
+    def __init__(self, id=None, availability=None):
         self.id = id
         self.availability = availability
 
+    # Ensure ellipsoids are Ellipsoid objects and handle them appropriately.
+    ellipsoid = class_property(Ellipsoid, 'ellipsoid')
 
     @property
     def position(self):
@@ -1284,6 +1516,25 @@ class CZMLPacket(_CZMLBaseObject):
             self._billboard = bb
         elif billboard is None:
             self._billboard = None
+        else:
+            raise TypeError
+
+    @property
+    def orientation(self):
+        """An orientation"""
+        if self._orientation is not None:
+            return self._orientation.data()
+
+    @orientation.setter
+    def orientation(self, orientation):
+        if isinstance(orientation, Orientation):
+            self._orientation = orientation
+        elif isinstance(orientation, dict):
+            p = Orientation()
+            p.load(point)
+            self._orientation = p
+        elif orientation is None:
+            self._orientation = None
         else:
             raise TypeError
 
@@ -1373,18 +1624,41 @@ class CZMLPacket(_CZMLBaseObject):
         else:
             raise TypeError
 
+    @property
+    def cone(self):
+        """A polygon, which is a closed figure on the surface of the Earth.
+        The vertices of the polygon are specified by the vertexPositions
+        property."""
+
+        if self._cone is not None:
+            return self._cone.data()
+
+    @cone.setter
+    def cone(self, cone):
+        if isinstance(cone, Cone):
+            self._cone = cone
+        elif isinstance(cone, dict):
+            p = Cone()
+            p.load(cone)
+            self._cone = p
+        elif cone is None:
+            self._cone = None
+        else:
+            raise TypeError
 
 
     def data(self):
         d = {}
         if self.id:
-            d['id']= self.id
-        #if self.availability is not None:
-        #    d['availability'] = self.availability
+            d['id'] = self.id
+        if self.availability is not None:
+            d['availability'] = self.availability
         if self.billboard is not None:
             d['billboard'] = self.billboard
         if self.position is not None:
             d['position'] = self.position
+        if self.orientation is not None:
+            d['orientation'] = self.orientation
         if self.label  is not None:
             d['label'] = self.label
         if self.point  is not None:
@@ -1395,12 +1669,18 @@ class CZMLPacket(_CZMLBaseObject):
             d['polyline'] = self.polyline
         if self.polygon  is not None:
             d['polygon'] = self.polygon
+        if self.cone is not None:
+            d['cone'] = self.cone
+        if self.path is not None:
+            d['path'] = self.path.data()
+        if self.ellipsoid is not None:
+            d['ellipsoid'] = self.ellipsoid.data()
         return d
 
 
     def load(self, data):
         self.id = data.get('id', None)
-        #self.availability = data.get('availability', None)
+        # self.availability = data.get('availability', None)
         self.billboard = data.get('billboard', None)
         self.position = data.get('position', None)
         self.label = data.get('label', None)
