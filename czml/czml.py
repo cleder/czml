@@ -46,8 +46,6 @@ from pygeoif import geometry
 from pygeoif.geometry import as_shape as asShape
 
 
-
-
 def grouper(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
     return izip_longest(*args, fillvalue=fillvalue)
@@ -83,8 +81,62 @@ def class_property(cls, name):
 
     return getter
 
+from pytz import utc
+
+def datetime_property(name, allow_offset=False, doc_str=None):
+    """Generates a datetime property that handles strings and timezones.
+
+    All provided datetimes with available timezone information are converted to
+    UTC before displaying as isoformat.  UTC information is removed from the
+    string format as it seems to break Cesium.
+    """
+    reserved_name = '_' + name
+
+    @property
+    def tz_prop(self):
+        """ Specifies the epoch to use for times specifies as seconds
+        since an epoch. """
+        val = getattr(self, reserved_name)
+        if isinstance(val, (date, datetime)):
+            return val.isoformat()
+        elif allow_offset and isinstance(val, (int, long, float)):
+            return val
+
+    @tz_prop.setter
+    def tz_prop(self, dt):
+        if dt is None:
+            setattr(self, reserved_name, None)
+        elif isinstance(dt, (date, datetime)):
+            if hasattr(dt, 'tzinfo') and dt.tzinfo:
+                dt = dt.astimezone(utc).replace(tzinfo=None)
+            setattr(self, reserved_name, dt)
+        elif allow_offset and isinstance(dt, (int, long, float)):
+            setattr(self, reserved_name, dt)
+        elif isinstance(dt, basestring):
+            if allow_offset:
+                try:
+                    dt = float(dt)
+                except ValueError:
+                    dt = dateutil.parser.parse(dt)
+            else:
+                dt = dateutil.parser.parse(dt)
+                if dt.tzinfo:
+                    dt = dt.astimezone(utc).replace(tzinfo=None)
+
+            setattr(self, reserved_name, dt)
+        else:
+            raise ValueError
+
+
+# This doesn't work as nicely as I would have liked.
+#    if doc_str:
+#        tz_prop.__doc__ = doc_str
+
+    return tz_prop
+
 # We make lots of material properties.
 material_property = lambda x: class_property(Material, x)
+
 
 class _CZMLBaseObject(object):
 
@@ -101,7 +153,6 @@ class _CZMLBaseObject(object):
 
     def load(self, data):
         raise NotImplementedError
-
 
 
 class CZML(_CZMLBaseObject):
@@ -155,78 +206,20 @@ class _DateTimeAware(_CZMLBaseObject):
         self.nextTime = nextTime
         self.previousTime = previousTime
 
-    @property
-    def epoch(self):
+    # TODO: doc_str is supposed to set the function doc string.
+    epoch = datetime_property('epoch', doc_str=
         """ Specifies the epoch to use for times specifies as seconds
-        since an epoch. """
-        if self._epoch:
-            return self._epoch.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-
-    @epoch.setter
-    def epoch(self, dt):
-        if dt is None:
-            self._epoch = None
-        elif isinstance(dt, (date, datetime)):
-            self._epoch = dt
-        elif isinstance(dt, basestring):
-            self._epoch = dateutil.parser.parse(dt)
-        else:
-            raise ValueError
-
-    @property
-    def nextTime(self):
+        since an epoch. """)
+    nextTime = datetime_property('nextTime', allow_offset=True, doc_str=
         """The time of the next sample within this interval, specified as
         either an ISO 8601 date and time string or as seconds since epoch.
         This property is used to determine if there is a gap between samples
-        specified in different packets."""
-        if isinstance(self._nextTime, (date, datetime)):
-            return self._nextTime.isoformat()
-        elif isinstance(self._nextTime, (int, long, float)):
-            return self._nextTime
-
-    @nextTime.setter
-    def nextTime(self, dt):
-        if dt is None:
-            self._nextTime = None
-        elif isinstance(dt, (date, datetime)):
-            self._nextTime = dt
-        elif isinstance(dt, (int, long, float)):
-            self._nextTime = dt
-        elif isinstance(dt, basestring):
-            try:
-                self._nextTime = float(dt)
-            except ValueError:
-                self._nextTime = dateutil.parser.parse(dt)
-        else:
-            raise ValueError
-
-
-    @property
-    def previousTime(self):
+        specified in different packets.""")
+    previousTime = datetime_property('previousTime', allow_offset=True, doc_str=
         """The time of the previous sample within this interval, specified
         as either an ISO 8601 date and time string or as seconds since epoch.
         This property is used to determine if there is a gap between samples
-        specified in different packets."""
-        if isinstance(self._previousTime, (date, datetime)):
-            return self._previousTime.isoformat()
-        elif isinstance(self._previousTime, (int, long, float)):
-            return self._previousTime
-
-    @previousTime.setter
-    def previousTime(self, dt):
-        if dt is None:
-            self._previousTime = None
-        elif isinstance(dt, (date, datetime)):
-            self._previousTime = dt
-        elif isinstance(dt, (int, long, float)):
-            self._previousTime = dt
-        elif isinstance(dt, basestring):
-            try:
-                self._previousTime = float(dt)
-            except ValueError:
-                self._previousTime = dateutil.parser.parse(dt)
-        else:
-            raise ValueError
+        specified in different packets.""")
 
 
     def load(self, data):
@@ -316,10 +309,6 @@ class _Coordinates(object):
                 d.append(coord.y)
                 d.append(coord.z)
         return d
-
-
-
-
 
 
 class Position(_DateTimeAware):
