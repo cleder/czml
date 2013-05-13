@@ -62,7 +62,7 @@ def class_property(cls, name):
     def getter(self):
         val = getattr(self, '_' + name)
         if val is not None:
-            return val
+            return val.data()
 
     @getter.setter
     def getter(self, val):
@@ -139,21 +139,35 @@ material_property = lambda x: class_property(Material, x)
 
 
 class _CZMLBaseObject(object):
+    _properties = ()
+
+    @property
+    def properties(self):
+        return self._properties
 
     def dumps(self):
         d = self.data()
         return json.dumps(d)
 
     def data(self):
-        raise NotImplementedError
+        d = {}
+        for attr in self.properties:
+            a = getattr(self, attr)
+            if a is not None:
+                if any([isinstance(a, x)
+                        for x in (_CZMLBaseObject, _Colors, _Coordinates, _VPositions)]):
+                    d[attr] = a.data()
+                else:
+                    d[attr] = a
+        return d
 
     def loads(self, data):
         packets = json.loads(data)
         self.load(packets)
 
     def load(self, data):
-        raise NotImplementedError
-
+        for k, v in data.iteritems():
+            setattr(self, k, v)
 
 class CZML(_CZMLBaseObject):
     """ CZML is a subset of JSON, meaning that a valid CZML document
@@ -169,7 +183,6 @@ class CZML(_CZMLBaseObject):
                 self.append(p)
         else:
             self.packets = []
-
 
     def data(self):
         for p in self.packets:
@@ -200,6 +213,7 @@ class _DateTimeAware(_CZMLBaseObject):
     _epoch = None
     _nextTime = None
     _previousTime = None
+    _properties = ('epoch', 'nextTime', 'previousTime')
 
     def __init__(self, epoch=None, nextTime=None, previousTime=None):
         self.epoch = epoch
@@ -220,23 +234,6 @@ class _DateTimeAware(_CZMLBaseObject):
         as either an ISO 8601 date and time string or as seconds since epoch.
         This property is used to determine if there is a gap between samples
         specified in different packets.""")
-
-
-    def load(self, data):
-        self.epoch = data.get('epoch', None)
-        self.nextTime = data.get('nextTime', None)
-        self.previousTime = data.get('previousTime', None)
-
-    def data(self):
-        d = {}
-        if self.epoch:
-            d['epoch'] = self.epoch
-        if self.nextTime:
-            d['nextTime'] = self.nextTime
-        if self.previousTime:
-            d['previousTime'] = self.previousTime
-        return d
-
 
 
 class _Coordinate(object):
@@ -331,6 +328,10 @@ class Position(_DateTimeAware):
     _cartographicRadians = None
     _cartographicDegrees = None
 
+    @property
+    def properties(self):
+        prop = super(Position, self).properties
+        return prop + ('cartesian', 'cartographicRadians', 'cartographicDegrees')
 
     def __init__(self, referenceFrame=None, cartesian=None,
             cartographicRadians=None, cartographicDegrees=None,
@@ -1153,9 +1154,11 @@ class Path(_CZMLBaseObject):
     _position = None
     position = class_property(Position, 'position')
 
-    _properties = ('show', 'color', 'resolution', 'outlineWidth', 'leadTime',
-                    'trailTime', 'position', 'width')
-
+    @property
+    def properties(self):
+        return super(Path, self).properties + ('show', 'color', 'resolution',
+                                               'outlineWidth', 'leadTime',
+                                               'trailTime', 'position', 'width')
 
     def __init__(self, **kwargs):
 
@@ -1165,16 +1168,6 @@ class Path(_CZMLBaseObject):
             else:
                 raise ValueError('Key word %s not known' % k)
 
-    def data(self):
-        d = {}
-        for attr in self._properties:
-            a = getattr(self, attr)
-            if a is not None:
-                if isinstance(a, _CZMLBaseObject):
-                    d[attr] = a.data()
-                else:
-                    d[attr] = a
-        return d
 
 class Material(_CZMLBaseObject):
     """The material to use to fill the polygon."""
@@ -1407,7 +1400,8 @@ class CZMLPacket(_CZMLBaseObject):
     # A path, which is a polyline defined by the motion of an object over
     # time. The possible vertices of the path are specified by the
     # position property.
-    path = None
+    _path = None
+    path = class_property(Path, 'path')
 
     # A polygon, which is a closed figure on the surface of the Earth.
     # The vertices of the polygon are specified by the vertexPositions
@@ -1433,15 +1427,16 @@ class CZMLPacket(_CZMLBaseObject):
 
     # An ellipsoid
     _ellipsoid = None
+    # Ensure ellipsoids are Ellipsoid objects and handle them appropriately.
+    ellipsoid = class_property(Ellipsoid, 'ellipsoid')
 
 
     def __init__(self, id=None, availability=None):
         self.id = id
         self.availability = availability
 
-    # Ensure ellipsoids are Ellipsoid objects and handle them appropriately.
-    ellipsoid = class_property(Ellipsoid, 'ellipsoid')
-
+    # TODO: Figure out how to set __doc__ from here.
+    # position = class_property(Position, 'position')
     @property
     def position(self):
         """The position of the object in the world. The position has no direct
@@ -1661,9 +1656,9 @@ class CZMLPacket(_CZMLBaseObject):
         if self.cone is not None:
             d['cone'] = self.cone
         if self.path is not None:
-            d['path'] = self.path.data()
+            d['path'] = self.path
         if self.ellipsoid is not None:
-            d['ellipsoid'] = self.ellipsoid.data()
+            d['ellipsoid'] = self.ellipsoid
         return d
 
 
