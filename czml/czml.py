@@ -1096,81 +1096,49 @@ class Path(_CZMLBaseObject):
                 raise ValueError('Key word %s not known' % k)
 
 
+class SolidColor(_CZMLBaseObject):
+    """Fills the surface with a solid color, which may be translucent."""
+    _properties = None
+    _properties = ('color',)
+
+
+class Image(_DateTimeAware):
+    """Fills the surface with an image."""
+    _image = None
+    _properties = ('image',)
+
+
 class Material(_CZMLBaseObject):
     """The material to use to fill the polygon."""
+    _image = None
+    _solidColor = None
 
-    _color = None
+    _properties = ('image', 'solidColor')
 
-    @property
-    def solidColor(self):
-        if self._color is not None:
-            return self._color
+    solidColor = class_property(SolidColor, 'solidColor',
+                                doc="""Fills the surface with a solid color, which may be translucent.
+                                """)
+    image = class_property(Image, 'image',
+                           doc="""The image to display on the surface.
 
-    @solidColor.setter
-    def solidColor(self, color):
-        if isinstance(color, Color):
-            self._color = color
-        elif isinstance(color, dict):
-            col = Color()
-            col.load(color)
-            self._color = col
-        elif color is None:
-            self._color = None
-        else:
-            raise TypeError
-
-    def data(self):
-        d = {}
-        if self.solidColor is not None:
-            d['solidColor'] = {'color': self.solidColor.data()}
-        return d
-
-    def load(self, data):
-        sc = data.get('solidColor', None)
-        if sc:
-            self.solidColor = sc.get('color', None)
-
-
+    """)
 
 
 class Polygon(_CZMLBaseObject):
     """A polygon, which is a closed figure on the surface of the Earth.
     The vertices of the polygon are specified by the vertexPositions property.
     """
-    show = False
+    show = None
+    vertexPositions = None
     _material = None
+    _properties = ('material', 'vertexPositions', 'show')
 
-
-    def __init__(self, color=None, image=None):
+    def __init__(self, color=None, **kwargs):
         if color:
             self.material = {"solidColor":{"color": color}}
+        super(Polygon, self).__init__(**kwargs)
 
-    @property
-    def material(self):
-        if self._material is not None:
-            return self._material
-
-    @material.setter
-    def material(self, material):
-        if isinstance(material, Material):
-            self._material = material
-        elif isinstance(material, dict):
-            m = Material()
-            m.load(material)
-            self._material = m
-        elif material is None:
-            self._material = None
-        else:
-            raise TypeError
-
-    def data(self):
-        d = {}
-        if self.material is not None:
-            d['material'] = self.material.data()
-        return d
-
-    def load(self, data):
-        self.material = data.get('material', None)
+    material = class_property(Material, 'material')
 
 class Ellipsoid(_DateTimeAware):
     show = True

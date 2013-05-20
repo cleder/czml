@@ -309,6 +309,16 @@ class CzmlClassesTestCase(unittest.TestCase):
         bb2.loads(bb.dumps())
         self.assertEqual(bb.data(), bb2.data())
 
+    def testMaterial(self):
+        red = czml.Color(rgba=(255, 0, 0, 64))
+        mat = czml.Material(solidColor={'color': red})
+        mat.solidColor = {'color': red}
+        mat_dict = {'solidColor': {'color': {'rgba': [255, 0, 0, 64]}}}
+        self.assertEqual(mat.data(), mat_dict)
+
+        mat2 = czml.Material(**mat_dict)
+        self.assertEqual(mat.data(), mat2.data())
+
     def testVertexPositions(self):
         v = czml.VertexPositions()
         l = geometry.LineString([(0, 0), (1, 1)])
@@ -363,7 +373,8 @@ class CzmlClassesTestCase(unittest.TestCase):
     def testPolygon(self):
         p = czml.Polygon()
         m = czml.Material()
-        m.solidColor = {'rgba': [0, 255, 127, 55]}
+        sc = czml.SolidColor(color={'rgba': [0, 255, 127, 55]})
+        m.solidColor = sc
         p.material = m
         self.assertEqual(p.data(),
             {'material':
@@ -376,6 +387,58 @@ class CzmlClassesTestCase(unittest.TestCase):
         self.assertEqual(p.data(), p2.data())
         p3 = czml.Polygon(color={'rgba': [0, 255, 127, 55]})
         self.assertEqual(p.data(), p3.data())
+
+    def testEllipsoid(self):
+        ellipsoid_value = {'radii': {'cartesian': [1000.0, 2000.0, 3000.0]},
+                           'material': {},
+                           'show': True,
+                           }
+        e = czml.Ellipsoid()
+        e.show = True
+        e.radii = czml.Radii(cartesian=[1000, 2000, 3000])
+        e.material = czml.Material()
+        self.assertEqual(e.data(), ellipsoid_value)
+        e2 = czml.Ellipsoid(**ellipsoid_value)
+        self.assertEqual(e.data(), ellipsoid_value)
+
+        # You can't create an ellipsoid with a nonsensical value for material.
+        ellipsoid_value['material'] = 2
+        with self.assertRaises(TypeError):
+            czml.Ellipsoid(**ellipsoid_value)
+
+        ellipsoid_value['material'] = {}
+        ellipsoid_value['radii'] = 5
+        # Can't create ellipsoids with nonsensical radii
+        with self.assertRaises(TypeError):
+            czml.Ellipsoid(**ellipsoid_value)
+
+    def testCone(self):
+        sc = czml.SolidColor(color={'rgba': [0, 255, 127, 55]})
+        mat = czml.Material(solidColor=sc)
+
+        c = czml.Cone(show=True,
+                      innerMaterial=mat,
+                      outerMaterial=mat,
+                      capMaterial=mat,
+                      showIntersection=True,
+                      outerHalfAngle=1,
+                      innerHalfAngle=2.0,
+                      )
+
+        czml_dict = {'outerHalfAngle': 1,
+                     'innerHalfAngle': 2.0,
+                     'outerMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}},
+                     'show': True,
+                     'showIntersection': True,
+                     'capMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}},
+                     'innerMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}}
+                     }
+
+        self.assertEqual(czml_dict, c.data())
+
+        # Passing in an unknown value raises a ValueError
+        with self.assertRaises(ValueError):
+            czml.Cone(bad_data=None, **czml_dict)
 
 
     def testCZMLPacket(self):
