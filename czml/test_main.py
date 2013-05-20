@@ -33,6 +33,7 @@ except ImportError:
 
 from pygeoif import geometry
 
+
 class BaseClassesTestCase(unittest.TestCase):
 
     def test_DateTimeAware(self):
@@ -46,7 +47,7 @@ class BaseClassesTestCase(unittest.TestCase):
         dtob.epoch = now.isoformat()
         self.assertEqual(dtob.epoch, now.isoformat())
         dtob.epoch = est_now.isoformat()
-        self.assertEqual(dtob.epoch, est_now.astimezone(utc).replace(tzinfo=None).isoformat())
+        self.assertEqual(dtob.epoch, est_now.isoformat())
         dtob.epoch = today
         self.assertEqual(dtob.epoch, today.isoformat())
         dtob.epoch = utcnow
@@ -90,18 +91,19 @@ class BaseClassesTestCase(unittest.TestCase):
         dtob.previousTime = None
         self.assertEqual(dtob.previousTime, None)
 
-        jst = '{"nextTime": 2, "previousTime": 1, "epoch": "2013-02-18T00:00:00"}'
+        jst = ('{"nextTime": 2, "previousTime": 1, '
+               '"epoch": "2013-02-18T00:00:00"}')
         dtob.loads(jst)
         self.assertEqual(dtob.previousTime, 1.0)
         self.assertEqual(dtob.nextTime, 2.0)
         self.assertEqual(dtob.data(), json.loads(jst))
 
-        # Here's a time that comes in as GMT-5.
-        est_jst = '{"nextTime": 2.0, "previousTime": 1, "epoch": "2013-02-18T01:00:00-05:00"}'
-        # It's five hours later at UTC.
-        utc_jst = '{"nextTime": 2.0, "previousTime": 1, "epoch": "2013-02-18T06:00:00"}'
+        # Here's a time that comes in as GMT-5.  The representation should be
+        # passed through
+        est_jst = ('{"nextTime": 2.0, "previousTime": 1,'
+                   ' "epoch": "2013-02-18T01:00:00-05:00"}')
         dtob.loads(est_jst)
-        self.assertEqual(dtob.data(), json.loads(utc_jst))
+        self.assertEqual(dtob.data(), json.loads(est_jst))
 
     def test_Coordinates(self):
         coord = czml._Coordinates([0, 1])
@@ -357,7 +359,6 @@ class CzmlClassesTestCase(unittest.TestCase):
         p2 = czml.Polyline()
         p2.loads(p.dumps())
         self.assertEqual(p.data(), p2.data())
-
 
     def testPolygon(self):
         p = czml.Polygon()

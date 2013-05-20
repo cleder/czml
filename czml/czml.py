@@ -51,21 +51,19 @@ def grouper(iterable, n, fillvalue=None):
     return izip_longest(*args, fillvalue=fillvalue)
 
 
-def class_property(cls, name):
+def class_property(cls, name, doc=None):
     """Returns a property function that checks to be sure
     the value being assigned is a certain class before assigning it to a hidden
     variable defined by "_" + name.  Also transparently returns the data()
     method when the object value is requested.
     """
 
-    @property
     def getter(self):
         val = getattr(self, '_' + name)
         if val is not None:
             return val.data()
 
-    @getter.setter
-    def getter(self, val):
+    def setter(self, val):
         hidden_attribute = '_' + name
         if isinstance(val, cls):
             setattr(self, hidden_attribute, val)
@@ -79,36 +77,26 @@ def class_property(cls, name):
             raise TypeError('Property %s must be of class %s. %s was provided.' %
                             (name, cls.__name__, val.__class__.__name__))
 
-    return getter
+    return property(getter, setter, doc=doc)
 
 from pytz import utc
 
-def datetime_property(name, allow_offset=False, doc_str=None):
+def datetime_property(name, allow_offset=False, doc=None):
     """Generates a datetime property that handles strings and timezones.
-
-    All provided datetimes with available timezone information are converted to
-    UTC before displaying as isoformat.  UTC information is removed from the
-    string format as it seems to break Cesium.
     """
     reserved_name = '_' + name
 
-    @property
-    def tz_prop(self):
-        """ Specifies the epoch to use for times specifies as seconds
-        since an epoch. """
+    def getter(self):
         val = getattr(self, reserved_name)
         if isinstance(val, (date, datetime)):
             return val.isoformat()
         elif allow_offset and isinstance(val, (int, long, float)):
             return val
 
-    @tz_prop.setter
-    def tz_prop(self, dt):
+    def setter(self, dt):
         if dt is None:
             setattr(self, reserved_name, None)
         elif isinstance(dt, (date, datetime)):
-            if hasattr(dt, 'tzinfo') and dt.tzinfo:
-                dt = dt.astimezone(utc).replace(tzinfo=None)
             setattr(self, reserved_name, dt)
         elif allow_offset and isinstance(dt, (int, long, float)):
             setattr(self, reserved_name, dt)
@@ -120,26 +108,25 @@ def datetime_property(name, allow_offset=False, doc_str=None):
                     dt = dateutil.parser.parse(dt)
             else:
                 dt = dateutil.parser.parse(dt)
-                if dt.tzinfo:
-                    dt = dt.astimezone(utc).replace(tzinfo=None)
-
             setattr(self, reserved_name, dt)
         else:
             raise ValueError
 
-
-# This doesn't work as nicely as I would have liked.
-#    if doc_str:
-#        tz_prop.__doc__ = doc_str
-
-    return tz_prop
+    return property(getter, setter, doc=doc)
 
 # We make lots of material properties.
-material_property = lambda x: class_property(Material, x)
+material_property = lambda x: class_property(Material, x, doc=
+    """The material to use to fill in the object you are creating.
+    """)
 
 
 class _CZMLBaseObject(object):
     _properties = ()
+
+    def __init__(self, **kwargs):
+        """Default init functionality is to load kwargs
+        """
+        self.load(kwargs)
 
     @property
     def properties(self):
@@ -154,8 +141,9 @@ class _CZMLBaseObject(object):
         for attr in self.properties:
             a = getattr(self, attr)
             if a is not None:
-                if any([isinstance(a, x)
-                        for x in (_CZMLBaseObject, _Colors, _Coordinates, _VPositions)]):
+                # These classes have a data method that should be called.
+                if isinstance(a, (_CZMLBaseObject, _Colors,
+                                  _Coordinates, _VPositions)):
                     d[attr] = a.data()
                 else:
                     d[attr] = a
@@ -167,7 +155,11 @@ class _CZMLBaseObject(object):
 
     def load(self, data):
         for k, v in data.iteritems():
-            setattr(self, k, v)
+            if k in self.properties:
+                setattr(self, k, v)
+            else:
+                raise ValueError
+
 
 class CZML(_CZMLBaseObject):
     """ CZML is a subset of JSON, meaning that a valid CZML document
@@ -215,21 +207,15 @@ class _DateTimeAware(_CZMLBaseObject):
     _previousTime = None
     _properties = ('epoch', 'nextTime', 'previousTime')
 
-    def __init__(self, epoch=None, nextTime=None, previousTime=None):
-        self.epoch = epoch
-        self.nextTime = nextTime
-        self.previousTime = previousTime
-
-    # TODO: doc_str is supposed to set the function doc string.
-    epoch = datetime_property('epoch', doc_str=
+    epoch = datetime_property('epoch', doc=
         """ Specifies the epoch to use for times specifies as seconds
         since an epoch. """)
-    nextTime = datetime_property('nextTime', allow_offset=True, doc_str=
+    nextTime = datetime_property('nextTime', allow_offset=True, doc=
         """The time of the next sample within this interval, specified as
         either an ISO 8601 date and time string or as seconds since epoch.
         This property is used to determine if there is a gap between samples
         specified in different packets.""")
-    previousTime = datetime_property('previousTime', allow_offset=True, doc_str=
+    previousTime = datetime_property('previousTime', allow_offset=True, doc=
         """The time of the previous sample within this interval, specified
         as either an ISO 8601 date and time string or as seconds since epoch.
         This property is used to determine if there is a gap between samples
@@ -308,6 +294,13 @@ class _Coordinates(object):
         return d
 
 
+class Number(_DateTimeAware):
+    """Represents numbers"""
+    def __init__(self, **kwargs):
+        self._properties += ('number',)
+        super(Number, self).__init__(**kwargs)
+
+
 class Position(_DateTimeAware):
     """ The position of the object in the world. The position has no
     direct visual representation, but it is used to locate billboards,
@@ -327,21 +320,14 @@ class Position(_DateTimeAware):
     _cartesian = None
     _cartographicRadians = None
     _cartographicDegrees = None
+    interpolationAlgorithm = None
+    interpolationDegree = None
 
-    @property
-    def properties(self):
-        prop = super(Position, self).properties
-        return prop + ('cartesian', 'cartographicRadians', 'cartographicDegrees')
-
-    def __init__(self, referenceFrame=None, cartesian=None,
-            cartographicRadians=None, cartographicDegrees=None,
-            epoch=None, nextTime=None, previousTime=None):
-        super(Position, self).__init__(epoch, nextTime, previousTime)
-        self.cartesian = cartesian
-        self.cartographicRadians = cartographicRadians
-        self.cartographicDegrees = cartographicDegrees
-        self.referenceFrame = referenceFrame
-
+    def __init__(self, **kwargs):
+        self._properties += ('cartesian', 'cartographicRadians',
+                             'cartographicDegrees', 'interpolationAlgorithm',
+                             'interpolationDegree')
+        super(Position, self).__init__(**kwargs)
 
     @property
     def cartesian(self):
@@ -400,23 +386,6 @@ class Position(_DateTimeAware):
         else:
             self._cartographicRadians = None
 
-    def load(self, data):
-        super(Position, self).load(data)
-        self.cartographicDegrees = data.get('cartographicDegrees', None)
-        self.cartographicRadians = data.get('cartographicRadians', None)
-        self.cartesian = data.get('cartesian', None)
-
-
-    def data(self):
-        d = super(Position, self).data()
-        if self.cartographicDegrees:
-            d['cartographicDegrees'] = self.cartographicDegrees.data()
-        if self.cartographicRadians:
-            d['cartographicRadians'] = self.cartographicRadians.data()
-        if self.cartesian:
-            d['cartesian'] = self.cartesian.data()
-        return d
-
 
 class Radii(_DateTimeAware):
     """ Radii is in support of ellipsoids.  This class is nearly an identical
@@ -433,17 +402,11 @@ class Radii(_DateTimeAware):
     # than cartesian. If this property is not specified,
     # the default reference frame is "FIXED".
     referenceFrame = None
-
     _cartesian = None
 
-
-    def __init__(self, referenceFrame=None, cartesian=None,
-            cartographicRadians=None, cartographicDegrees=None,
-            epoch=None, nextTime=None, previousTime=None):
-        super(Radii, self).__init__(epoch, nextTime, previousTime)
-        self.cartesian = cartesian
-        self.referenceFrame = referenceFrame
-
+    def __init__(self, **kwargs):
+        self._properties += ('cartesian', 'referenceFrame')
+        super(_DateTimeAware, self).__init__(**kwargs)
 
     @property
     def cartesian(self):
@@ -466,14 +429,6 @@ class Radii(_DateTimeAware):
     def load(self, data):
         super(Radii, self).load(data)
         self.cartesian = data.get('cartesian', None)
-
-
-    def data(self):
-        d = super(Radii, self).data()
-        if self.cartesian:
-            d['cartesian'] = self.cartesian.data()
-        return d
-
 
 class _Color(object):
     r = g = b = a = 0
@@ -552,12 +507,9 @@ class Color(_DateTimeAware):
     _rgba = None
     _rgbaf = None
 
-    def __init__(self, rgba=None, rgbaf=None,
-            epoch=None, nextTime=None, previousTime=None):
-        super(Color, self).__init__(epoch, nextTime, previousTime)
-        self.rgba = rgba
-        self.rgbaf = rgbaf
-
+    def __init__(self, **kwargs):
+        self._properties += ('rgba', 'rgbaf')
+        super(_DateTimeAware, self).__init__(**kwargs)
 
     @property
     def rgba(self):
@@ -597,22 +549,6 @@ class Color(_DateTimeAware):
             self._rgbaf = None
         else:
             self._rgbaf = _Colors(colors, num=float)
-
-
-    def data(self):
-        d = super(Color, self).data()
-        if self.rgba is not None:
-            d['rgba'] = self.rgba
-        if self.rgbaf is not None:
-            d['rgbaf'] = self.rgbaf
-        return d
-
-
-    def load(self, data):
-        super(Color, self).load(data)
-        self.rgba = data.get('rgba', None)
-        self.rgbaf = data.get('rgbaf', None)
-
 
 class Scale(_DateTimeAware):
     """ The scale of the billboard. The scale is multiplied with the
@@ -886,35 +822,26 @@ class VertexPositions(_CZMLBaseObject):
 
 
 
-class Orientation(_DateTimeAware, _CZMLBaseObject):
+class Orientation(_DateTimeAware):
     """The orientation of the object in the world.
     The orientation has no direct visual representation, but it is used
     to orient models, cones, and pyramids attached to the object.
+
+    TODO: check the quaternions to be sure they're valid.
 
     https://github.com/AnalyticalGraphicsInc/cesium/wiki/CZML-Content#orientation
 
     """
 
-    _unitQuaternion = None
-    _axes = None
+    unitQuaternion = None
+    axes = None
+    interpolationAlgorithm = None
+    interpolationDegree = None
 
-    def __init__(self, axes=None, unitQuaternion=None, color=None):
-        self.axes = axes
-        self.unitQuaternion = unitQuaternion
-
-    def data(self):
-        d = super(Orientation, self).data()
-        if self.axes:
-            d['axes'] = self.axes
-        if self.unitQuaternion:
-            d['unitQuaternion'] = self.unitQuaternion
-        return d
-
-    def load(self, kws):
-        if 'axis' in kws:
-            d['axis'] = kws['axis']
-        if 'unitQuaternion' in kws:
-            d['unitQuaternion'] = kws['unitQuaternion']
+    def __init__(self, **kwargs):
+        self._properties += ('axes', 'unitQuaternion',
+                             'interpolationAlgorithm', 'interpolationDegree')
+        super(Orientation, self).__init__(**kwargs)
 
 
 class Point(_CZMLBaseObject):
@@ -1192,8 +1119,6 @@ class Material(_CZMLBaseObject):
         else:
             raise TypeError
 
-
-
     def data(self):
         d = {}
         if self.solidColor is not None:
@@ -1247,7 +1172,7 @@ class Polygon(_CZMLBaseObject):
     def load(self, data):
         self.material = data.get('material', None)
 
-class Ellipsoid(_DateTimeAware, _CZMLBaseObject):
+class Ellipsoid(_DateTimeAware):
     show = True
     _radii = None
     _material = None
@@ -1302,17 +1227,17 @@ class Cone(_DateTimeAware, _CZMLBaseObject):
     outerMaterial = material_property('outerMaterial')
     silhouetteMaterial = material_property('silhouetteMaterial')
 
-    _properties = ('show', 'innerHalfAngle', 'outerHalfAngle', 'radius',
-                   'minimumClockAngle', 'maximumClockAngle',
-                   'showIntersection', 'intersectionColor',
-                   'capMaterial', 'innerMaterial', 'outerMaterial',
-                   'silhouetteMaterial')
-
     def __init__(self, epoch=None, nextTime=None, previousTime=None, **kwargs):
 
         _DateTimeAware.__init__(self, epoch=epoch,
                                 nextTime=nextTime,
                                 previousTime=previousTime)
+
+        self._properties += ('show', 'innerHalfAngle', 'outerHalfAngle', 'radius',
+                             'minimumClockAngle', 'maximumClockAngle',
+                             'showIntersection', 'intersectionColor',
+                             'capMaterial', 'innerMaterial', 'outerMaterial',
+                             'silhouetteMaterial')
         for param in kwargs:
             if param in self._properties:
                 setattr(self, param, kwargs[param])
