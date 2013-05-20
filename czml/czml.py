@@ -46,28 +46,24 @@ from pygeoif import geometry
 from pygeoif.geometry import as_shape as asShape
 
 
-
-
 def grouper(iterable, n, fillvalue=None):
     args = [iter(iterable)] * n
     return izip_longest(*args, fillvalue=fillvalue)
 
 
-def class_property(cls, name):
+def class_property(cls, name, doc=None):
     """Returns a property function that checks to be sure
     the value being assigned is a certain class before assigning it to a hidden
     variable defined by "_" + name.  Also transparently returns the data()
     method when the object value is requested.
     """
 
-    @property
     def getter(self):
         val = getattr(self, '_' + name)
         if val is not None:
-            return val
+            return val.data()
 
-    @getter.setter
-    def getter(self, val):
+    def setter(self, val):
         hidden_attribute = '_' + name
         if isinstance(val, cls):
             setattr(self, hidden_attribute, val)
@@ -81,27 +77,88 @@ def class_property(cls, name):
             raise TypeError('Property %s must be of class %s. %s was provided.' %
                             (name, cls.__name__, val.__class__.__name__))
 
-    return getter
+    return property(getter, setter, doc=doc)
+
+from pytz import utc
+
+def datetime_property(name, allow_offset=False, doc=None):
+    """Generates a datetime property that handles strings and timezones.
+    """
+    reserved_name = '_' + name
+
+    def getter(self):
+        val = getattr(self, reserved_name)
+        if isinstance(val, (date, datetime)):
+            return val.isoformat()
+        elif allow_offset and isinstance(val, (int, long, float)):
+            return val
+
+    def setter(self, dt):
+        if dt is None:
+            setattr(self, reserved_name, None)
+        elif isinstance(dt, (date, datetime)):
+            setattr(self, reserved_name, dt)
+        elif allow_offset and isinstance(dt, (int, long, float)):
+            setattr(self, reserved_name, dt)
+        elif isinstance(dt, basestring):
+            if allow_offset:
+                try:
+                    dt = float(dt)
+                except ValueError:
+                    dt = dateutil.parser.parse(dt)
+            else:
+                dt = dateutil.parser.parse(dt)
+            setattr(self, reserved_name, dt)
+        else:
+            raise ValueError
+
+    return property(getter, setter, doc=doc)
 
 # We make lots of material properties.
-material_property = lambda x: class_property(Material, x)
+material_property = lambda x: class_property(Material, x, doc=
+    """The material to use to fill in the object you are creating.
+    """)
+
 
 class _CZMLBaseObject(object):
+    _properties = ()
+
+    def __init__(self, **kwargs):
+        """Default init functionality is to load kwargs
+        """
+        self.load(kwargs)
+
+    @property
+    def properties(self):
+        return self._properties
 
     def dumps(self):
         d = self.data()
         return json.dumps(d)
 
     def data(self):
-        raise NotImplementedError
+        d = {}
+        for attr in self.properties:
+            a = getattr(self, attr)
+            if a is not None:
+                # These classes have a data method that should be called.
+                if isinstance(a, (_CZMLBaseObject, _Colors,
+                                  _Coordinates, _VPositions)):
+                    d[attr] = a.data()
+                else:
+                    d[attr] = a
+        return d
 
     def loads(self, data):
         packets = json.loads(data)
         self.load(packets)
 
     def load(self, data):
-        raise NotImplementedError
-
+        for k, v in data.iteritems():
+            if k in self.properties:
+                setattr(self, k, v)
+            else:
+                raise ValueError
 
 
 class CZML(_CZMLBaseObject):
@@ -118,7 +175,6 @@ class CZML(_CZMLBaseObject):
                 self.append(p)
         else:
             self.packets = []
-
 
     def data(self):
         for p in self.packets:
@@ -149,101 +205,21 @@ class _DateTimeAware(_CZMLBaseObject):
     _epoch = None
     _nextTime = None
     _previousTime = None
+    _properties = ('epoch', 'nextTime', 'previousTime')
 
-    def __init__(self, epoch=None, nextTime=None, previousTime=None):
-        self.epoch = epoch
-        self.nextTime = nextTime
-        self.previousTime = previousTime
-
-    @property
-    def epoch(self):
+    epoch = datetime_property('epoch', doc=
         """ Specifies the epoch to use for times specifies as seconds
-        since an epoch. """
-        if self._epoch:
-            return self._epoch.strftime('%Y-%m-%dT%H:%M:%S.%fZ')
-
-    @epoch.setter
-    def epoch(self, dt):
-        if dt is None:
-            self._epoch = None
-        elif isinstance(dt, (date, datetime)):
-            self._epoch = dt
-        elif isinstance(dt, basestring):
-            self._epoch = dateutil.parser.parse(dt)
-        else:
-            raise ValueError
-
-    @property
-    def nextTime(self):
+        since an epoch. """)
+    nextTime = datetime_property('nextTime', allow_offset=True, doc=
         """The time of the next sample within this interval, specified as
         either an ISO 8601 date and time string or as seconds since epoch.
         This property is used to determine if there is a gap between samples
-        specified in different packets."""
-        if isinstance(self._nextTime, (date, datetime)):
-            return self._nextTime.isoformat()
-        elif isinstance(self._nextTime, (int, long, float)):
-            return self._nextTime
-
-    @nextTime.setter
-    def nextTime(self, dt):
-        if dt is None:
-            self._nextTime = None
-        elif isinstance(dt, (date, datetime)):
-            self._nextTime = dt
-        elif isinstance(dt, (int, long, float)):
-            self._nextTime = dt
-        elif isinstance(dt, basestring):
-            try:
-                self._nextTime = float(dt)
-            except ValueError:
-                self._nextTime = dateutil.parser.parse(dt)
-        else:
-            raise ValueError
-
-
-    @property
-    def previousTime(self):
+        specified in different packets.""")
+    previousTime = datetime_property('previousTime', allow_offset=True, doc=
         """The time of the previous sample within this interval, specified
         as either an ISO 8601 date and time string or as seconds since epoch.
         This property is used to determine if there is a gap between samples
-        specified in different packets."""
-        if isinstance(self._previousTime, (date, datetime)):
-            return self._previousTime.isoformat()
-        elif isinstance(self._previousTime, (int, long, float)):
-            return self._previousTime
-
-    @previousTime.setter
-    def previousTime(self, dt):
-        if dt is None:
-            self._previousTime = None
-        elif isinstance(dt, (date, datetime)):
-            self._previousTime = dt
-        elif isinstance(dt, (int, long, float)):
-            self._previousTime = dt
-        elif isinstance(dt, basestring):
-            try:
-                self._previousTime = float(dt)
-            except ValueError:
-                self._previousTime = dateutil.parser.parse(dt)
-        else:
-            raise ValueError
-
-
-    def load(self, data):
-        self.epoch = data.get('epoch', None)
-        self.nextTime = data.get('nextTime', None)
-        self.previousTime = data.get('previousTime', None)
-
-    def data(self):
-        d = {}
-        if self.epoch:
-            d['epoch'] = self.epoch
-        if self.nextTime:
-            d['nextTime'] = self.nextTime
-        if self.previousTime:
-            d['previousTime'] = self.previousTime
-        return d
-
+        specified in different packets.""")
 
 
 class _Coordinate(object):
@@ -318,8 +294,11 @@ class _Coordinates(object):
         return d
 
 
-
-
+class Number(_DateTimeAware):
+    """Represents numbers"""
+    def __init__(self, **kwargs):
+        self._properties += ('number',)
+        super(Number, self).__init__(**kwargs)
 
 
 class Position(_DateTimeAware):
@@ -341,17 +320,14 @@ class Position(_DateTimeAware):
     _cartesian = None
     _cartographicRadians = None
     _cartographicDegrees = None
+    interpolationAlgorithm = None
+    interpolationDegree = None
 
-
-    def __init__(self, referenceFrame=None, cartesian=None,
-            cartographicRadians=None, cartographicDegrees=None,
-            epoch=None, nextTime=None, previousTime=None):
-        super(Position, self).__init__(epoch, nextTime, previousTime)
-        self.cartesian = cartesian
-        self.cartographicRadians = cartographicRadians
-        self.cartographicDegrees = cartographicDegrees
-        self.referenceFrame = referenceFrame
-
+    def __init__(self, **kwargs):
+        self._properties += ('cartesian', 'cartographicRadians',
+                             'cartographicDegrees', 'interpolationAlgorithm',
+                             'interpolationDegree')
+        super(Position, self).__init__(**kwargs)
 
     @property
     def cartesian(self):
@@ -410,23 +386,6 @@ class Position(_DateTimeAware):
         else:
             self._cartographicRadians = None
 
-    def load(self, data):
-        super(Position, self).load(data)
-        self.cartographicDegrees = data.get('cartographicDegrees', None)
-        self.cartographicRadians = data.get('cartographicRadians', None)
-        self.cartesian = data.get('cartesian', None)
-
-
-    def data(self):
-        d = super(Position, self).data()
-        if self.cartographicDegrees:
-            d['cartographicDegrees'] = self.cartographicDegrees.data()
-        if self.cartographicRadians:
-            d['cartographicRadians'] = self.cartographicRadians.data()
-        if self.cartesian:
-            d['cartesian'] = self.cartesian.data()
-        return d
-
 
 class Radii(_DateTimeAware):
     """ Radii is in support of ellipsoids.  This class is nearly an identical
@@ -443,17 +402,11 @@ class Radii(_DateTimeAware):
     # than cartesian. If this property is not specified,
     # the default reference frame is "FIXED".
     referenceFrame = None
-
     _cartesian = None
 
-
-    def __init__(self, referenceFrame=None, cartesian=None,
-            cartographicRadians=None, cartographicDegrees=None,
-            epoch=None, nextTime=None, previousTime=None):
-        super(Radii, self).__init__(epoch, nextTime, previousTime)
-        self.cartesian = cartesian
-        self.referenceFrame = referenceFrame
-
+    def __init__(self, **kwargs):
+        self._properties += ('cartesian', 'referenceFrame')
+        super(_DateTimeAware, self).__init__(**kwargs)
 
     @property
     def cartesian(self):
@@ -476,14 +429,6 @@ class Radii(_DateTimeAware):
     def load(self, data):
         super(Radii, self).load(data)
         self.cartesian = data.get('cartesian', None)
-
-
-    def data(self):
-        d = super(Radii, self).data()
-        if self.cartesian:
-            d['cartesian'] = self.cartesian.data()
-        return d
-
 
 class _Color(object):
     r = g = b = a = 0
@@ -562,12 +507,9 @@ class Color(_DateTimeAware):
     _rgba = None
     _rgbaf = None
 
-    def __init__(self, rgba=None, rgbaf=None,
-            epoch=None, nextTime=None, previousTime=None):
-        super(Color, self).__init__(epoch, nextTime, previousTime)
-        self.rgba = rgba
-        self.rgbaf = rgbaf
-
+    def __init__(self, **kwargs):
+        self._properties += ('rgba', 'rgbaf')
+        super(_DateTimeAware, self).__init__(**kwargs)
 
     @property
     def rgba(self):
@@ -607,22 +549,6 @@ class Color(_DateTimeAware):
             self._rgbaf = None
         else:
             self._rgbaf = _Colors(colors, num=float)
-
-
-    def data(self):
-        d = super(Color, self).data()
-        if self.rgba is not None:
-            d['rgba'] = self.rgba
-        if self.rgbaf is not None:
-            d['rgbaf'] = self.rgbaf
-        return d
-
-
-    def load(self, data):
-        super(Color, self).load(data)
-        self.rgba = data.get('rgba', None)
-        self.rgbaf = data.get('rgbaf', None)
-
 
 class Scale(_DateTimeAware):
     """ The scale of the billboard. The scale is multiplied with the
@@ -896,35 +822,26 @@ class VertexPositions(_CZMLBaseObject):
 
 
 
-class Orientation(_DateTimeAware, _CZMLBaseObject):
+class Orientation(_DateTimeAware):
     """The orientation of the object in the world.
     The orientation has no direct visual representation, but it is used
     to orient models, cones, and pyramids attached to the object.
+
+    TODO: check the quaternions to be sure they're valid.
 
     https://github.com/AnalyticalGraphicsInc/cesium/wiki/CZML-Content#orientation
 
     """
 
-    _unitQuaternion = None
-    _axes = None
+    unitQuaternion = None
+    axes = None
+    interpolationAlgorithm = None
+    interpolationDegree = None
 
-    def __init__(self, axes=None, unitQuaternion=None, color=None):
-        self.axes = axes
-        self.unitQuaternion = unitQuaternion
-
-    def data(self):
-        d = super(Orientation, self).data()
-        if self.axes:
-            d['axes'] = self.axes
-        if self.unitQuaternion:
-            d['unitQuaternion'] = self.unitQuaternion
-        return d
-
-    def load(self, kws):
-        if 'axis' in kws:
-            d['axis'] = kws['axis']
-        if 'unitQuaternion' in kws:
-            d['unitQuaternion'] = kws['unitQuaternion']
+    def __init__(self, **kwargs):
+        self._properties += ('axes', 'unitQuaternion',
+                             'interpolationAlgorithm', 'interpolationDegree')
+        super(Orientation, self).__init__(**kwargs)
 
 
 class Point(_CZMLBaseObject):
@@ -1164,9 +1081,11 @@ class Path(_CZMLBaseObject):
     _position = None
     position = class_property(Position, 'position')
 
-    _properties = ('show', 'color', 'resolution', 'outlineWidth', 'leadTime',
-                    'trailTime', 'position', 'width')
-
+    @property
+    def properties(self):
+        return super(Path, self).properties + ('show', 'color', 'resolution',
+                                               'outlineWidth', 'leadTime',
+                                               'trailTime', 'position', 'width')
 
     def __init__(self, **kwargs):
 
@@ -1176,96 +1095,52 @@ class Path(_CZMLBaseObject):
             else:
                 raise ValueError('Key word %s not known' % k)
 
-    def data(self):
-        d = {}
-        for attr in self._properties:
-            a = getattr(self, attr)
-            if a is not None:
-                if isinstance(a, _CZMLBaseObject):
-                    d[attr] = a.data()
-                else:
-                    d[attr] = a
-        return d
+
+class SolidColor(_CZMLBaseObject):
+    """Fills the surface with a solid color, which may be translucent."""
+    _properties = None
+    _properties = ('color',)
+
+
+class Image(_DateTimeAware):
+    """Fills the surface with an image."""
+    _image = None
+    _properties = ('image',)
+
 
 class Material(_CZMLBaseObject):
     """The material to use to fill the polygon."""
+    _image = None
+    _solidColor = None
 
-    _color = None
+    _properties = ('image', 'solidColor')
 
-    @property
-    def solidColor(self):
-        if self._color is not None:
-            return self._color
+    solidColor = class_property(SolidColor, 'solidColor',
+                                doc="""Fills the surface with a solid color, which may be translucent.
+                                """)
+    image = class_property(Image, 'image',
+                           doc="""The image to display on the surface.
 
-    @solidColor.setter
-    def solidColor(self, color):
-        if isinstance(color, Color):
-            self._color = color
-        elif isinstance(color, dict):
-            col = Color()
-            col.load(color)
-            self._color = col
-        elif color is None:
-            self._color = None
-        else:
-            raise TypeError
-
-
-
-    def data(self):
-        d = {}
-        if self.solidColor is not None:
-            d['solidColor'] = {'color': self.solidColor.data()}
-        return d
-
-    def load(self, data):
-        sc = data.get('solidColor', None)
-        if sc:
-            self.solidColor = sc.get('color', None)
-
-
+    """)
 
 
 class Polygon(_CZMLBaseObject):
     """A polygon, which is a closed figure on the surface of the Earth.
     The vertices of the polygon are specified by the vertexPositions property.
     """
-    show = False
+    show = None
+    vertexPositions = None
     _material = None
+    _properties = ('material', 'vertexPositions', 'show')
 
-
-    def __init__(self, color=None, image=None):
+    def __init__(self, color=None, **kwargs):
         if color:
             self.material = {"solidColor":{"color": color}}
+        super(Polygon, self).__init__(**kwargs)
 
-    @property
-    def material(self):
-        if self._material is not None:
-            return self._material
+    material = class_property(Material, 'material')
 
-    @material.setter
-    def material(self, material):
-        if isinstance(material, Material):
-            self._material = material
-        elif isinstance(material, dict):
-            m = Material()
-            m.load(material)
-            self._material = m
-        elif material is None:
-            self._material = None
-        else:
-            raise TypeError
-
-    def data(self):
-        d = {}
-        if self.material is not None:
-            d['material'] = self.material.data()
-        return d
-
-    def load(self, data):
-        self.material = data.get('material', None)
-
-class Ellipsoid(_DateTimeAware, _CZMLBaseObject):
+class Ellipsoid(_DateTimeAware):
     show = True
     _radii = None
     _material = None
@@ -1320,17 +1195,17 @@ class Cone(_DateTimeAware, _CZMLBaseObject):
     outerMaterial = material_property('outerMaterial')
     silhouetteMaterial = material_property('silhouetteMaterial')
 
-    _properties = ('show', 'innerHalfAngle', 'outerHalfAngle', 'radius',
-                   'minimumClockAngle', 'maximumClockAngle',
-                   'showIntersection', 'intersectionColor',
-                   'capMaterial', 'innerMaterial', 'outerMaterial',
-                   'silhouetteMaterial')
-
     def __init__(self, epoch=None, nextTime=None, previousTime=None, **kwargs):
 
         _DateTimeAware.__init__(self, epoch=epoch,
                                 nextTime=nextTime,
                                 previousTime=previousTime)
+
+        self._properties += ('show', 'innerHalfAngle', 'outerHalfAngle', 'radius',
+                             'minimumClockAngle', 'maximumClockAngle',
+                             'showIntersection', 'intersectionColor',
+                             'capMaterial', 'innerMaterial', 'outerMaterial',
+                             'silhouetteMaterial')
         for param in kwargs:
             if param in self._properties:
                 setattr(self, param, kwargs[param])
@@ -1418,7 +1293,8 @@ class CZMLPacket(_CZMLBaseObject):
     # A path, which is a polyline defined by the motion of an object over
     # time. The possible vertices of the path are specified by the
     # position property.
-    path = None
+    _path = None
+    path = class_property(Path, 'path')
 
     # A polygon, which is a closed figure on the surface of the Earth.
     # The vertices of the polygon are specified by the vertexPositions
@@ -1444,15 +1320,16 @@ class CZMLPacket(_CZMLBaseObject):
 
     # An ellipsoid
     _ellipsoid = None
+    # Ensure ellipsoids are Ellipsoid objects and handle them appropriately.
+    ellipsoid = class_property(Ellipsoid, 'ellipsoid')
 
 
     def __init__(self, id=None, availability=None):
         self.id = id
         self.availability = availability
 
-    # Ensure ellipsoids are Ellipsoid objects and handle them appropriately.
-    ellipsoid = class_property(Ellipsoid, 'ellipsoid')
-
+    # TODO: Figure out how to set __doc__ from here.
+    # position = class_property(Position, 'position')
     @property
     def position(self):
         """The position of the object in the world. The position has no direct
@@ -1672,9 +1549,9 @@ class CZMLPacket(_CZMLBaseObject):
         if self.cone is not None:
             d['cone'] = self.cone
         if self.path is not None:
-            d['path'] = self.path.data()
+            d['path'] = self.path
         if self.ellipsoid is not None:
-            d['ellipsoid'] = self.ellipsoid.data()
+            d['ellipsoid'] = self.ellipsoid
         return d
 
 
