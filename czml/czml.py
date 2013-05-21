@@ -154,7 +154,13 @@ class _CZMLBaseObject(object):
         self.load(packets)
 
     def load(self, data):
-        for k, v in data.iteritems():
+        if hasattr( data, 'iteritems'):
+            # python 2
+            iterator = data.iteritems
+        elif hasattr( data, 'items'):
+            # python 3
+            iterator = data.items
+        for k, v in iterator():
             if k in self.properties:
                 setattr(self, k, v)
             else:
