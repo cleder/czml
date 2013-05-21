@@ -18,6 +18,8 @@
 import unittest
 from datetime import datetime, date
 import json
+from pytz import timezone, utc
+eastern = timezone('US/Eastern')
 
 try:
     from czml import czml
@@ -31,25 +33,40 @@ except ImportError:
 
 from pygeoif import geometry
 
-class BaseClassesTestCase( unittest.TestCase ):
+
+class BaseClassesTestCase(unittest.TestCase):
 
     def test_DateTimeAware(self):
         dtob = czml._DateTimeAware()
         now = datetime.now()
+        est_now = eastern.localize(now)
+        utcnow = datetime.utcnow()
         today = now.date()
         dtob.epoch = now
         self.assertEqual(dtob.epoch, now.isoformat())
         dtob.epoch = now.isoformat()
         self.assertEqual(dtob.epoch, now.isoformat())
+        dtob.epoch = est_now.isoformat()
+        self.assertEqual(dtob.epoch, est_now.isoformat())
         dtob.epoch = today
         self.assertEqual(dtob.epoch, today.isoformat())
+        dtob.epoch = utcnow
+        self.assertEqual(dtob.epoch, utcnow.isoformat())
         dtob.epoch = None
         self.assertEqual(dtob.epoch, None)
+        # Cannot assign an integer to epoch (no offsets allowed)
+        with self.assertRaises(ValueError):
+            dtob.epoch = 1
+        # Cannot assign a float to epoch (no offsets allowed)
+        with self.assertRaises(ValueError):
+            dtob.epoch = 2.0
 
         dtob.nextTime = now
         self.assertEqual(dtob.nextTime, now.isoformat())
         dtob.nextTime = now.isoformat()
         self.assertEqual(dtob.nextTime, now.isoformat())
+        dtob.nextTime = utcnow
+        self.assertEqual(dtob.nextTime, utcnow.isoformat())
         dtob.nextTime = today
         self.assertEqual(dtob.nextTime, today.isoformat())
         dtob.nextTime = 1
@@ -63,6 +80,8 @@ class BaseClassesTestCase( unittest.TestCase ):
         self.assertEqual(dtob.previousTime, now.isoformat())
         dtob.previousTime = now.isoformat()
         self.assertEqual(dtob.previousTime, now.isoformat())
+        dtob.previousTime = utcnow
+        self.assertEqual(dtob.previousTime, utcnow.isoformat())
         dtob.previousTime = today
         self.assertEqual(dtob.previousTime, today.isoformat())
         dtob.previousTime = 1
@@ -72,34 +91,41 @@ class BaseClassesTestCase( unittest.TestCase ):
         dtob.previousTime = None
         self.assertEqual(dtob.previousTime, None)
 
-        jst = '{"nextTime": 2, "previousTime": 1, "epoch": "2013-02-18T00:00:00"}'
+        jst = ('{"nextTime": 2, "previousTime": 1, '
+               '"epoch": "2013-02-18T00:00:00"}')
         dtob.loads(jst)
         self.assertEqual(dtob.previousTime, 1.0)
         self.assertEqual(dtob.nextTime, 2.0)
         self.assertEqual(dtob.data(), json.loads(jst))
 
+        # Here's a time that comes in as GMT-5.  The representation should be
+        # passed through
+        est_jst = ('{"nextTime": 2.0, "previousTime": 1,'
+                   ' "epoch": "2013-02-18T01:00:00-05:00"}')
+        dtob.loads(est_jst)
+        self.assertEqual(dtob.data(), json.loads(est_jst))
 
     def test_Coordinates(self):
-        coord = czml._Coordinates([0,1])
+        coord = czml._Coordinates([0, 1])
         self.assertEqual(len(coord.coords), 1)
         self.assertEqual(coord.coords[0].x, 0)
         self.assertEqual(coord.coords[0].y, 1)
         self.assertEqual(coord.coords[0].z, 0)
         self.assertEqual(coord.coords[0].t, None)
-        coord = czml._Coordinates([0,1,2])
+        coord = czml._Coordinates([0, 1, 2])
         self.assertEqual(len(coord.coords), 1)
         self.assertEqual(coord.coords[0].x, 0)
         self.assertEqual(coord.coords[0].y, 1)
         self.assertEqual(coord.coords[0].z, 2)
         self.assertEqual(coord.coords[0].t, None)
         now = datetime.now()
-        coord = czml._Coordinates([now, 0,1,2])
+        coord = czml._Coordinates([now, 0, 1, 2])
         self.assertEqual(len(coord.coords), 1)
         self.assertEqual(coord.coords[0].x, 0)
         self.assertEqual(coord.coords[0].y, 1)
         self.assertEqual(coord.coords[0].z, 2)
         self.assertEqual(coord.coords[0].t, now)
-        y2k = datetime(2000,1,1)
+        y2k = datetime(2000, 1, 1)
         coord = czml._Coordinates([now, 0, 1, 2, y2k, 3, 4, 5])
         self.assertEqual(len(coord.coords), 2)
         self.assertEqual(coord.coords[0].x, 0)
@@ -150,7 +176,7 @@ class BaseClassesTestCase( unittest.TestCase ):
         now = datetime.now()
         col.rgba = [now, 0, 255, 127, 55]
         self.assertEqual(col.rgba, [now.isoformat(), 0, 255, 127, 55])
-        y2k = datetime(2000,1,1)
+        y2k = datetime(2000, 1, 1)
         col.rgba = [now, 0, 255, 127, 55, y2k.isoformat(), 5, 6, 7, 8]
         self.assertEqual(col.rgba, [now.isoformat(), 0, 255, 127, 55,
                                     y2k.isoformat(), 5, 6, 7, 8])
@@ -167,9 +193,9 @@ class BaseClassesTestCase( unittest.TestCase ):
     def test_hexcolor_to_rgba(self):
         col = '0000'
         ashex = utils.hexcolor_to_rgba
-        self.assertEqual(ashex(col), (0,0,0,0))
+        self.assertEqual(ashex(col), (0, 0, 0, 0))
         col = '0101'
-        self.assertEqual(ashex(col), (0,17,0,17))
+        self.assertEqual(ashex(col), (0, 17, 0, 17))
         col = 'f0f0'
         self.assertEqual(ashex(col), (255, 0, 255, 0))
         col = 'AABBCCDD'
@@ -192,7 +218,7 @@ class BaseClassesTestCase( unittest.TestCase ):
         self.assertRaises(AttributeError, ashex, col)
 
 
-class CzmlClassesTestCase( unittest.TestCase ):
+class CzmlClassesTestCase(unittest.TestCase):
 
     def testPosition(self):
         pos = czml.Position()
@@ -215,6 +241,23 @@ class CzmlClassesTestCase( unittest.TestCase ):
         pos2.loads(pos.dumps())
         self.assertEqual(pos.data(), pos2.data())
 
+    def testRadii(self):
+        pos = czml.Radii()
+        now = datetime.now()
+        pos.epoch = now
+        coords = [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]
+        pos.cartesian = coords
+        self.assertEqual(pos.data()['cartesian'],
+            coords)
+        js = {'epoch': now.isoformat(), 'cartesian': coords}
+        self.assertEqual(pos.data(), js)
+        self.assertEqual(pos.dumps(), json.dumps(js))
+        pos.cartographicDegrees = coords
+        self.assertEqual(pos.data()['cartesian'],
+            coords)
+        pos2 = czml.Radii()
+        pos2.loads(pos.dumps())
+        self.assertEqual(pos.data(), pos2.data())
 
     def testPoint(self):
         point = czml.Point()
@@ -223,14 +266,14 @@ class CzmlClassesTestCase( unittest.TestCase ):
                 {'rgba': [0, 255, 127, 55]},
                 'show': False})
         point.outlineColor = {'rgbaf': [0.0, 0.255, 0.127, 0.55]}
-        self.assertEqual(point.data(),{'color':
+        self.assertEqual(point.data(), {'color':
                     {'rgba': [0, 255, 127, 55]},
                     'outlineColor': {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
                     'show': False})
         point.pixelSize = 10
         point.outlineWidth = 2
         point.show = True
-        self.assertEqual(point.data(),{'color':
+        self.assertEqual(point.data(), {'color':
                         {'rgba': [0, 255, 127, 55]},
                     'pixelSize': 10,
                     'outlineColor':
@@ -266,6 +309,16 @@ class CzmlClassesTestCase( unittest.TestCase ):
         bb2.loads(bb.dumps())
         self.assertEqual(bb.data(), bb2.data())
 
+    def testMaterial(self):
+        red = czml.Color(rgba=(255, 0, 0, 64))
+        mat = czml.Material(solidColor={'color': red})
+        mat.solidColor = {'color': red}
+        mat_dict = {'solidColor': {'color': {'rgba': [255, 0, 0, 64]}}}
+        self.assertEqual(mat.data(), mat_dict)
+
+        mat2 = czml.Material(**mat_dict)
+        self.assertEqual(mat.data(), mat2.data())
+
     def testVertexPositions(self):
         v = czml.VertexPositions()
         l = geometry.LineString([(0, 0), (1, 1)])
@@ -289,7 +342,7 @@ class CzmlClassesTestCase( unittest.TestCase ):
         v.cartesian = None
         v.cartographicDegrees = None
         v.cartographicRadians = [0.0, 0.0, .0, 1.0, 1.0, 1.0]
-        self.assertEqual(v.data(),{'cartographicRadians':
+        self.assertEqual(v.data(), {'cartographicRadians':
             [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]})
 
     def testPolyline(self):
@@ -299,14 +352,14 @@ class CzmlClassesTestCase( unittest.TestCase ):
                 {'rgba': [0, 255, 127, 55]},
                 'show': False})
         p.outlineColor = {'rgbaf': [0.0, 0.255, 0.127, 0.55]}
-        self.assertEqual(p.data(),{'color':
+        self.assertEqual(p.data(), {'color':
                     {'rgba': [0, 255, 127, 55]},
                     'outlineColor': {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
                     'show': False})
         p.width = 10
         p.outlineWidth = 2
         p.show = True
-        self.assertEqual(p.data(),{'color':
+        self.assertEqual(p.data(), {'color':
                         {'rgba': [0, 255, 127, 55]},
                     'width': 10,
                     'outlineColor':
@@ -317,11 +370,11 @@ class CzmlClassesTestCase( unittest.TestCase ):
         p2.loads(p.dumps())
         self.assertEqual(p.data(), p2.data())
 
-
     def testPolygon(self):
         p = czml.Polygon()
         m = czml.Material()
-        m.solidColor = {'rgba': [0, 255, 127, 55]}
+        sc = czml.SolidColor(color={'rgba': [0, 255, 127, 55]})
+        m.solidColor = sc
         p.material = m
         self.assertEqual(p.data(),
             {'material':
@@ -332,8 +385,60 @@ class CzmlClassesTestCase( unittest.TestCase ):
         p2 = czml.Polygon()
         p2.loads(p.dumps())
         self.assertEqual(p.data(), p2.data())
-        p3 = czml.Polygon(color = {'rgba': [0, 255, 127, 55]})
+        p3 = czml.Polygon(color={'rgba': [0, 255, 127, 55]})
         self.assertEqual(p.data(), p3.data())
+
+    def testEllipsoid(self):
+        ellipsoid_value = {'radii': {'cartesian': [1000.0, 2000.0, 3000.0]},
+                           'material': {},
+                           'show': True,
+                           }
+        e = czml.Ellipsoid()
+        e.show = True
+        e.radii = czml.Radii(cartesian=[1000, 2000, 3000])
+        e.material = czml.Material()
+        self.assertEqual(e.data(), ellipsoid_value)
+        e2 = czml.Ellipsoid(**ellipsoid_value)
+        self.assertEqual(e.data(), ellipsoid_value)
+
+        # You can't create an ellipsoid with a nonsensical value for material.
+        ellipsoid_value['material'] = 2
+        with self.assertRaises(TypeError):
+            czml.Ellipsoid(**ellipsoid_value)
+
+        ellipsoid_value['material'] = {}
+        ellipsoid_value['radii'] = 5
+        # Can't create ellipsoids with nonsensical radii
+        with self.assertRaises(TypeError):
+            czml.Ellipsoid(**ellipsoid_value)
+
+    def testCone(self):
+        sc = czml.SolidColor(color={'rgba': [0, 255, 127, 55]})
+        mat = czml.Material(solidColor=sc)
+
+        c = czml.Cone(show=True,
+                      innerMaterial=mat,
+                      outerMaterial=mat,
+                      capMaterial=mat,
+                      showIntersection=True,
+                      outerHalfAngle=1,
+                      innerHalfAngle=2.0,
+                      )
+
+        czml_dict = {'outerHalfAngle': 1,
+                     'innerHalfAngle': 2.0,
+                     'outerMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}},
+                     'show': True,
+                     'showIntersection': True,
+                     'capMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}},
+                     'innerMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}}
+                     }
+
+        self.assertEqual(czml_dict, c.data())
+
+        # Passing in an unknown value raises a ValueError
+        with self.assertRaises(ValueError):
+            czml.Cone(bad_data=None, **czml_dict)
 
 
     def testCZMLPacket(self):
@@ -370,7 +475,7 @@ class CzmlClassesTestCase( unittest.TestCase ):
         p3.point = {'color':
                     {'rgba': [0, 255, 127, 55]},
                     'show': True}
-        self.assertEqual(p3.data(),{'id': 'cde',
+        self.assertEqual(p3.data(), {'id': 'cde',
                                     'point': {'color':
                                         {'rgba': [0, 255, 127, 55]},
                                         'show': True}})
@@ -404,7 +509,7 @@ class CzmlClassesTestCase( unittest.TestCase ):
         self.assertEqual(p4.data(), p42.data())
         p5 = czml.CZMLPacket(id='efgh')
         p5.vertexPositions = v
-        poly = czml.Polygon(color = {'rgba': [0, 255, 127, 55]})
+        poly = czml.Polygon(color={'rgba': [0, 255, 127, 55]})
         p5.polygon = poly
         self.assertEqual(p5.data(),
             {'polygon':
@@ -433,7 +538,7 @@ class CzmlClassesTestCase( unittest.TestCase ):
             'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]}}])
         cz1 = czml.CZML()
         cz1.loads(cz.dumps())
-        self.assertEqual(list(cz.data()),list(cz1.data()))
+        self.assertEqual(list(cz.data()), list(cz1.data()))
 
 
 def test_suite():
