@@ -55,12 +55,13 @@ class BaseClassesTestCase(unittest.TestCase):
         dtob.epoch = None
         self.assertEqual(dtob.epoch, None)
         # Cannot assign an integer to epoch (no offsets allowed)
-        with self.assertRaises(ValueError):
-            dtob.epoch = 1
+        #with self.assertRaises(ValueError):
+        #    dtob.epoch = 1
+        self.assertRaises(ValueError, setattr, dtob, 'epoch', 1)
         # Cannot assign a float to epoch (no offsets allowed)
-        with self.assertRaises(ValueError):
-            dtob.epoch = 2.0
-
+        #with self.assertRaises(ValueError):
+        #    dtob.epoch = 2.0
+        self.assertRaises(ValueError, setattr, dtob, 'epoch', 2.0)
         dtob.nextTime = now
         self.assertEqual(dtob.nextTime, now.isoformat())
         dtob.nextTime = now.isoformat()
@@ -403,14 +404,17 @@ class CzmlClassesTestCase(unittest.TestCase):
 
         # You can't create an ellipsoid with a nonsensical value for material.
         ellipsoid_value['material'] = 2
-        with self.assertRaises(TypeError):
-            czml.Ellipsoid(**ellipsoid_value)
+        #with self.assertRaises(TypeError):
+        #    czml.Ellipsoid(**ellipsoid_value)
+        self.assertRaises(TypeError, czml.Ellipsoid, **ellipsoid_value)
 
         ellipsoid_value['material'] = {}
         ellipsoid_value['radii'] = 5
         # Can't create ellipsoids with nonsensical radii
-        with self.assertRaises(TypeError):
-            czml.Ellipsoid(**ellipsoid_value)
+        #with self.assertRaises(TypeError):
+        #    czml.Ellipsoid(**ellipsoid_value)
+        self.assertRaises(TypeError, czml.Ellipsoid, **ellipsoid_value)
+
 
     def testCone(self):
         sc = czml.SolidColor(color={'rgba': [0, 255, 127, 55]})
@@ -437,9 +441,9 @@ class CzmlClassesTestCase(unittest.TestCase):
         self.assertEqual(czml_dict, c.data())
 
         # Passing in an unknown value raises a ValueError
-        with self.assertRaises(ValueError):
-            czml.Cone(bad_data=None, **czml_dict)
-
+        #with self.assertRaises(ValueError):
+        #    czml.Cone(bad_data=None, **czml_dict)
+        self.assertRaises(ValueError, czml.Cone, bad_data=None, **czml_dict)
 
     def testCZMLPacket(self):
         p = czml.CZMLPacket(id='abc')
