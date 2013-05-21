@@ -1094,8 +1094,11 @@ class Path(_CZMLBaseObject):
                                                'trailTime', 'position', 'width')
 
     def __init__(self, **kwargs):
-
-        for k, v in kwargs.iteritems():
+        if hasattr(kwargs, 'iteritems'):
+            iterator = kwargs.iteritems
+        elif hasattr(kwargs, 'items'):
+            iterator = kwargs.items
+        for k, v in iterator():
             if k in self._properties:
                 setattr(self, k, v)
             else:
