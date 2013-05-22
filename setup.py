@@ -50,6 +50,7 @@ setup(name='czml',
           # -*- Extra requirements: -*-
           "pygeoif",
           'python-dateutil',
+          'pytz',
       ],
       entry_points="""
       # -*- Entry points: -*-

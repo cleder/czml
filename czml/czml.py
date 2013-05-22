@@ -158,7 +158,13 @@ class _CZMLBaseObject(object):
         self.load(packets)
 
     def load(self, data):
-        for k, v in data.iteritems():
+        if hasattr( data, 'iteritems'):
+            # python 2
+            iterator = data.iteritems
+        elif hasattr( data, 'items'):
+            # python 3
+            iterator = data.items
+        for k, v in iterator():
             if k in self.properties:
                 setattr(self, k, v)
             else:
@@ -1101,8 +1107,11 @@ class Path(_CZMLBaseObject):
                                                'trailTime', 'position', 'width')
 
     def __init__(self, **kwargs):
-
-        for k, v in kwargs.iteritems():
+        if hasattr(kwargs, 'iteritems'):
+            iterator = kwargs.iteritems
+        elif hasattr(kwargs, 'items'):
+            iterator = kwargs.items
+        for k, v in iterator():
             if k in self._properties:
                 setattr(self, k, v)
             else:
