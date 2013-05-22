@@ -339,7 +339,7 @@ class Position(_DateTimeAware):
     def __init__(self, **kwargs):
         self._properties += ('cartesian', 'cartographicRadians',
                              'cartographicDegrees', 'interpolationAlgorithm',
-                             'interpolationDegree')
+                             'interpolationDegree', 'referenceFrame')
         super(Position, self).__init__(**kwargs)
 
     @property
