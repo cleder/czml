@@ -1,7 +1,7 @@
 Introduction
 ############
 
-A library to read and write CZML_ files for Cesium_
+A library to read and write CZML_ files for the Cesium_ Webglobe
 
 
 .. _Cesium: http://cesium.agi.com/
