@@ -26,4 +26,5 @@ czml is continually tested with *Travis CI*
 .. image:: https://api.travis-ci.org/cleder/czml.png
     :target: https://travis-ci.org/cleder/czml
 
-
+.. image:: https://coveralls.io/repos/cleder/czml/badge.png?branch=master
+    :target: https://coveralls.io/r/cleder/czml?branch=master
