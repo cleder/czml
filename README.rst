@@ -1,7 +1,7 @@
 Introduction
 ############
 
-A library to read and write CZML_ files for Cesium_
+A library to read and write CZML_ files for the Cesium_ Webglobe
 
 
 .. _Cesium: http://cesium.agi.com/
@@ -26,4 +26,5 @@ czml is continually tested with *Travis CI*
 .. image:: https://api.travis-ci.org/cleder/czml.png
     :target: https://travis-ci.org/cleder/czml
 
-
+.. image:: https://coveralls.io/repos/cleder/czml/badge.png?branch=master
+    :target: https://coveralls.io/r/cleder/czml?branch=master

@@ -1272,7 +1272,6 @@ class Cone(_DateTimeAware, _CZMLBaseObject):
                     d[attr] = a.data()
                 else:
                     d[attr] = a
-
             # TODO: Finish entering these.
         return d
 
