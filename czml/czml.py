@@ -158,10 +158,10 @@ class _CZMLBaseObject(object):
         self.load(packets)
 
     def load(self, data):
-        if hasattr( data, 'iteritems'):
+        if hasattr(data, 'iteritems'):
             # python 2
             iterator = data.iteritems
-        elif hasattr( data, 'items'):
+        elif hasattr(data, 'items'):
             # python 3
             iterator = data.items
         for k, v in iterator():
@@ -317,6 +317,7 @@ class Number(_DateTimeAware):
         if (('number' in data) and (len(data.keys()) == 1) and
             isinstance(data['number'], (int, float, str, long))):
             return data['number']
+        return super(Number, self).data()
 
 
 
@@ -1274,8 +1275,6 @@ class Cone(_DateTimeAware, _CZMLBaseObject):
 
             # TODO: Finish entering these.
         return d
-
-
 
 class Pyramid(_CZMLBaseObject):
     """A pyramid starts at a point or apex and extends in a specified list
