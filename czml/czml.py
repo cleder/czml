@@ -74,8 +74,12 @@ def class_property(cls, name, doc=None):
         elif val is None:
             setattr(self, hidden_attribute, None)
         else:
-            raise TypeError('Property %s must be of class %s. %s was provided.' %
-                            (name, cls.__name__, val.__class__.__name__))
+            # See if this value works as the only input to cls
+            try:
+                setattr(self, hidden_attribute, cls(val))
+            except TypeError:
+                raise TypeError('Property %s must be of class %s. %s was provided.' %
+                                (name, cls.__name__, val.__class__.__name__))
 
     return property(getter, setter, doc=doc)
 
@@ -154,10 +158,10 @@ class _CZMLBaseObject(object):
         self.load(packets)
 
     def load(self, data):
-        if hasattr( data, 'iteritems'):
+        if hasattr(data, 'iteritems'):
             # python 2
             iterator = data.iteritems
-        elif hasattr( data, 'items'):
+        elif hasattr(data, 'items'):
             # python 3
             iterator = data.items
         for k, v in iterator():
@@ -302,9 +306,19 @@ class _Coordinates(object):
 
 class Number(_DateTimeAware):
     """Represents numbers"""
-    def __init__(self, **kwargs):
+    number = None
+
+    def __init__(self, number=number, **kwargs):
         self._properties += ('number',)
-        super(Number, self).__init__(**kwargs)
+        super(Number, self).__init__(number=number, **kwargs)
+
+    def data(self):
+        data = super(Number, self).data()
+        if (('number' in data) and (len(data.keys()) == 1) and
+            isinstance(data['number'], (int, float, str, long))):
+            return data['number']
+        return super(Number, self).data()
+
 
 
 class Position(_DateTimeAware):
@@ -332,7 +346,7 @@ class Position(_DateTimeAware):
     def __init__(self, **kwargs):
         self._properties += ('cartesian', 'cartographicRadians',
                              'cartographicDegrees', 'interpolationAlgorithm',
-                             'interpolationDegree')
+                             'interpolationDegree', 'referenceFrame')
         super(Position, self).__init__(**kwargs)
 
     @property
@@ -1149,6 +1163,32 @@ class Polygon(_CZMLBaseObject):
 
     material = class_property(Material, 'material')
 
+
+class Ellipse(_CZMLBaseObject):
+    """
+    An ellipse, which is a closed curve on the surface of the Earth. The
+    ellipse is positioned using the position property.
+
+    Note that this requires a polygon or polyline to actually get drawn!
+    """
+    _properties = ('semiMajorAxis', 'semiMinorAxis', 'bearing')
+    _bearing = None
+    _semiMajorAxis = None
+    _semiMinorAxis = None
+
+    bearing = class_property(Number, 'bearing', doc="""
+    The angle from north (clockwise) in radians.
+    """)
+
+    semiMajorAxis = class_property(Number, 'semiMajorAxis', doc="""
+    The length of the ellipse's semi-major axis in meters.
+    """)
+
+    semiMinorAxis = class_property(Number, 'semiMinorAxis', doc="""
+    The length of the ellipse's semi-minor axis in meters.
+    """)
+
+
 class Ellipsoid(_DateTimeAware):
     show = True
     _radii = None
@@ -1234,8 +1274,6 @@ class Cone(_DateTimeAware, _CZMLBaseObject):
                     d[attr] = a
             # TODO: Finish entering these.
         return d
-
-
 
 class Pyramid(_CZMLBaseObject):
     """A pyramid starts at a point or apex and extends in a specified list
@@ -1331,7 +1369,11 @@ class CZMLPacket(_CZMLBaseObject):
     # Ensure ellipsoids are Ellipsoid objects and handle them appropriately.
     ellipsoid = class_property(Ellipsoid, 'ellipsoid')
 
+    # ellipse
+    _ellipse = None
+    ellipse = class_property(Ellipse, 'ellipse')
 
+    # TODO: replace this.
     def __init__(self, id=None, availability=None):
         self.id = id
         self.availability = availability
@@ -1560,6 +1602,8 @@ class CZMLPacket(_CZMLBaseObject):
             d['path'] = self.path
         if self.ellipsoid is not None:
             d['ellipsoid'] = self.ellipsoid
+        if self.ellipse is not None:
+            d['ellipse'] = self.ellipse
         return d
 
 
