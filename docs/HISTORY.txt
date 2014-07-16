@@ -1,7 +1,9 @@
+
 0.2 (unreleased)
 -----------------
 
-- add Radii, Orientation, Path, Ellipsoid, Cone [Carl Fischer (Carl4)]
+- Fixed bug in the Number class [Carl Fischer (Carl4)]
+- add Radii, Orientation, Path, Ellipsoid, Cone, Ellipse [Carl Fischer (Carl4)]
 
 
 v 0.1 (2013/04/05)
