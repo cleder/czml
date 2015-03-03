@@ -708,6 +708,54 @@ class Billboard(_CZMLBaseObject):
         self.scale = data.get('scale', None)
         self.color = data.get('color', None)
 
+class Clock(_CZMLBaseObject):
+    """The clock settings for the entire data set. Only valid on the
+    document object."""
+
+    # The current time.
+    currentTime = None
+
+    # The multiplier, which in TICK_DEPENDENT mode is the number of seconds
+    # to advance each tick. In SYSTEM_CLOCK_DEPENDENT mode, it is the
+    # multiplier applied to the amount of time elapsed between ticks.
+    # This value is ignored in SYSTEM_CLOCK mode.
+    multiplier = None
+
+    # The behavior of a clock when its current time reaches its start or
+    # end points. Valid values are 'UNBOUNDED', 'CLAMPED', and 'LOOP_STOP'.
+    range = None
+
+    # Defines how a clock steps in time. Valid values are 'SYSTEM_CLOCK',
+    # 'SYSTEM_CLOCK_MULTIPLIER', and 'TICK_DEPENDENT'.
+    step = None
+
+    _interval = None
+
+    def __init__(self, currentTime=None, multiplier=None, range=None, step=None):
+        self.currentTime = currentTime
+        self.multiplier = multiplier
+        self.range = range
+        self.step = step
+
+    def data(self):
+        d = {}
+        if self.currentTime:
+            d['currentTime'] = self.currentTime
+        if self.multiplier:
+            d['multiplier'] = self.multiplier
+        if self.range:
+            d['range'] = self.range
+        if self.step:
+            d['step'] = self.step
+        return d
+
+    def load(self, data):
+        self.currentTime = data.get('currentTime', None)
+        self.multiplier = data.get('multiplier', None)
+        self.range = data.get('range', None)
+        self.step = data.get('step', None)
+
+
 class _VPositions(object):
     """ The list of positions [X, Y, Z, X, Y, Z, ...] """
 
@@ -1317,6 +1365,8 @@ class CZMLPacket(_CZMLBaseObject):
 
     _billboard = None
 
+    _clock = None
+
     # The world-space positions of vertices. The vertex positions have no
     # direct visual representation, but they are used to define polygons,
     # polylines, and other objects attached to the object.
@@ -1443,6 +1493,26 @@ class CZMLPacket(_CZMLBaseObject):
             self._billboard = bb
         elif billboard is None:
             self._billboard = None
+        else:
+            raise TypeError
+
+    @property
+    def clock(self):
+        """The clock settings for the entire data set. Only valid on the
+        document object."""
+        if self._clock is not None:
+            return self._clock.data()
+
+    @clock.setter
+    def clock(self, clock):
+        if isinstance(clock, Clock):
+            self._clock = clock
+        elif isinstance(clock, dict):
+            c = Clock()
+            c.load(clock)
+            self._clock = c
+        elif clock is None:
+            self._clock = None
         else:
             raise TypeError
 
@@ -1582,6 +1652,8 @@ class CZMLPacket(_CZMLBaseObject):
             d['availability'] = self.availability
         if self.billboard is not None:
             d['billboard'] = self.billboard
+        if self.clock is not None:
+            d['clock'] = self.clock
         if self.position is not None:
             d['position'] = self.position
         if self.orientation is not None:
@@ -1611,6 +1683,7 @@ class CZMLPacket(_CZMLBaseObject):
         self.id = data.get('id', None)
         # self.availability = data.get('availability', None)
         self.billboard = data.get('billboard', None)
+        self.clock = data.get('clock', None)
         self.position = data.get('position', None)
         self.label = data.get('label', None)
         self.point = data.get('point', None)
