@@ -310,6 +310,21 @@ class CzmlClassesTestCase(unittest.TestCase):
         bb2.loads(bb.dumps())
         self.assertEqual(bb.data(), bb2.data())
 
+    def testClock(self):
+        c = czml.Clock()
+        c.currentTime = '2017-08-21T16:50:00Z'
+        c.multiplier = 3
+        c.range = 'UNBOUNDED'
+        c.step = 'SYSTEM_CLOCK_MULTIPLIER'
+        self.assertEqual(c.data(),
+            {'currentTime': '2017-08-21T16:50:00Z',
+             'multiplier': 3,
+             'range': 'UNBOUNDED',
+             'step': 'SYSTEM_CLOCK_MULTIPLIER'})
+        c2 = czml.Clock()
+        c2.loads(c.dumps())
+        self.assertEqual(c.data(), c2.data())
+
     def testMaterial(self):
         red = czml.Color(rgba=(255, 0, 0, 64))
         mat = czml.Material(solidColor={'color': red})
@@ -456,6 +471,20 @@ class CzmlClassesTestCase(unittest.TestCase):
         self.assertEqual(p.data(),
             {'billboard': {'image': 'http://localhost/img.png',
             'scale': 0.7, 'show': True}, 'id': 'abc'})
+        c = czml.Clock()
+        c.currentTime = '2017-08-21T16:50:00Z'
+        c.multiplier = 3
+        c.range = 'UNBOUNDED'
+        c.step = 'SYSTEM_CLOCK_MULTIPLIER'
+        p.clock = c
+        self.assertEqual(p.data(),
+                         {'billboard': {'image': 'http://localhost/img.png',
+                                        'scale': 0.7, 'show': True },
+                          'id': 'abc',
+                          'clock': {'currentTime': '2017-08-21T16:50:00Z',
+                                    'multiplier': 3, 'range': 'UNBOUNDED',
+                                    'step': 'SYSTEM_CLOCK_MULTIPLIER'},
+                          })
         p2 = czml.CZMLPacket(id='abc')
         p2.loads(p.dumps())
         self.assertEqual(p.data(), p2.data())
@@ -468,11 +497,15 @@ class CzmlClassesTestCase(unittest.TestCase):
         l.show = False
         p.label = l
         self.assertEqual(p.data(),
-            {'billboard': {'image': 'http://localhost/img.png',
-            'scale': 0.7, 'show': True}, 'id': 'abc',
-            'label': {'show': False, 'text': 'test label'},
-            'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]},
-            })
+                         {'billboard': {'image': 'http://localhost/img.png',
+                                        'scale': 0.7, 'show': True },
+                          'id': 'abc',
+                          'clock': {'currentTime': '2017-08-21T16:50:00Z',
+                                    'multiplier': 3, 'range': 'UNBOUNDED',
+                                    'step': 'SYSTEM_CLOCK_MULTIPLIER'},
+                          'label': {'show': False, 'text': 'test label'},
+                          'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]},
+                          })
         p2.loads(p.dumps())
         self.assertEqual(p.data(), p2.data())
         p3 = czml.CZMLPacket(id='cde')
@@ -536,10 +569,15 @@ class CzmlClassesTestCase(unittest.TestCase):
         p = self.testCZMLPacket()
         cz.packets.append(p)
         self.assertEqual(list(cz.data()),
-            [{'billboard': {'image': 'http://localhost/img.png',
-            'scale': 0.7, 'show': True}, 'id': 'abc',
-            'label': {'show': False, 'text': 'test label'},
-            'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]}}])
+                         [{'billboard': {'image': 'http://localhost/img.png',
+                                         'scale': 0.7, 'show': True},
+                           'id': 'abc',
+                           'clock': {'currentTime': '2017-08-21T16:50:00Z',
+                                     'multiplier': 3, 'range': 'UNBOUNDED',
+                                     'step': 'SYSTEM_CLOCK_MULTIPLIER'},
+                           'label': {'show': False, 'text': 'test label'},
+                           'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]}
+                           }])
         cz1 = czml.CZML()
         cz1.loads(cz.dumps())
         self.assertEqual(list(cz.data()), list(cz1.data()))

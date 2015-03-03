@@ -729,8 +729,6 @@ class Clock(_CZMLBaseObject):
     # 'SYSTEM_CLOCK_MULTIPLIER', and 'TICK_DEPENDENT'.
     step = None
 
-    _interval = None
-
     def __init__(self, currentTime=None, multiplier=None, range=None, step=None):
         self.currentTime = currentTime
         self.multiplier = multiplier
