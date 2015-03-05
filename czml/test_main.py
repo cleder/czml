@@ -312,13 +312,81 @@ class CzmlClassesTestCase(unittest.TestCase):
 
     def testMaterial(self):
         red = czml.Color(rgba=(255, 0, 0, 64))
-        mat = czml.Material(solidColor={'color': red})
+        mat = czml.Material()
         mat.solidColor = {'color': red}
         mat_dict = {'solidColor': {'color': {'rgba': [255, 0, 0, 64]}}}
         self.assertEqual(mat.data(), mat_dict)
-
         mat2 = czml.Material(**mat_dict)
         self.assertEqual(mat.data(), mat2.data())
+
+    def testGrid(self):
+        red = czml.Color(rgba=(255, 0, 0, 64))
+        g = czml.Grid()
+        g.color = red
+        g.cellAlpha = 0.5
+        g.lineCount = 4
+        g.lineThickness = 1.5
+        g.lineOffset = 0.75
+        g_dict = {'color': {'rgba': [255, 0, 0, 64]}, 'cellAlpha': 0.5, 'lineCount': 4,
+                  'lineThickness': 1.5, 'lineOffset': 0.75}
+        self.assertEqual(g.data(), g_dict)
+        g2 = czml.Grid(**g_dict)
+        self.assertEqual(g.data(), g2.data())
+
+    def testImage(self):
+        i = czml.Image()
+        i.image = 'http://localhost/img.png'
+        i.repeat = 3
+        i_dict = {'image': 'http://localhost/img.png', 'repeat': 3}
+        self.assertEqual(i.data(), i_dict)
+        i2 = czml.Image(**i_dict)
+        self.assertEqual(i.data(), i2.data())
+
+    def testStripe(self):
+        red = czml.Color(rgba=(255, 0, 0, 64))
+        grn = czml.Color(rgba=(0, 255, 0, 64))
+        s = czml.Stripe()
+        s.orientation = 'HORIZONTAL'
+        s.evenColor = red
+        s.oddColor = grn
+        s.offset = 1.5
+        s.repeat = 3.6
+        s_dict = {'orientation': 'HORIZONTAL', 'evenColor': {'rgba': [255, 0, 0, 64]},
+                  'oddColor': {'rgba': [0, 255, 0, 64]}, 'offset': 1.5, 'repeat': 3.6}
+        self.assertEqual(s.data(), s_dict)
+        s2 = czml.Stripe(**s_dict)
+        self.assertEqual(s.data(), s2.data())
+
+    def testSolidColor(self):
+        red = czml.Color(rgba=(255, 0, 0, 64))
+        sc = czml.SolidColor()
+        sc.color = red
+        sc_dict = {'color': {'rgba': [255, 0, 0, 64]}}
+        self.assertEqual(sc.data(), sc_dict)
+        sc2 = czml.SolidColor(**sc_dict)
+        self.assertEqual(sc.data(), sc2.data())
+
+    def testPolylineGlow(self):
+        red = czml.Color(rgba=(255, 0, 0, 64))
+        pg = czml.PolylineGlow()
+        pg.color = red
+        pg.glowPower = 0.25
+        pg_dict = {'color': {'rgba': [255, 0, 0, 64]}, 'glowPower': 0.25}
+        self.assertEqual(pg.data(), pg_dict)
+        pg2 = czml.PolylineGlow(**pg_dict)
+        self.assertEqual(pg.data(), pg2.data())
+
+    def testPolylineOutline(self):
+        red = czml.Color(rgba=(255, 0, 0, 64))
+        grn = czml.Color(rgba=(0, 255, 0, 64))
+        po = czml.PolylineOutline()
+        po.color = red
+        po.outlineColor = grn
+        po.outlineWidth = 4
+        po_dict = {'color': {'rgba': [255, 0, 0, 64]}, 'outlineColor': {'rgba': [0, 255, 0, 64]}, 'outlineWidth': 4}
+        self.assertEqual(po.data(), po_dict)
+        po2 = czml.PolylineOutline(**po_dict)
+        self.assertEqual(po.data(), po2.data())
 
     def testVertexPositions(self):
         v = czml.VertexPositions()

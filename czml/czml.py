@@ -1119,32 +1119,83 @@ class Path(_CZMLBaseObject):
                 raise ValueError('Key word %s not known' % k)
 
 
+class Grid(_CZMLBaseObject):
+    """Fills the surface with a grid."""
+    _color = None
+    _cellAlpha = None
+    _lineCount = None
+    _lineThickness = None
+    _lineOffset = None
+    _properties = ('color', 'cellAlpha', 'lineCount', 'lineThickness', 'lineOffset',)
+
+
+class Image(_CZMLBaseObject):
+    """Fills the surface with an image."""
+    _image = None
+    _repeat = None
+    _properties = ('image', 'repeat',)
+
+
+class Stripe(_CZMLBaseObject):
+    """Fills the surface with alternating colors."""
+    _orientation = None
+    _evenColor = None
+    _oddColor = None
+    _offset = None
+    _repeat = None
+    _properties = ('orientation', 'evenColor', 'oddColor', 'offset', 'repeat',)
+
+
 class SolidColor(_CZMLBaseObject):
     """Fills the surface with a solid color, which may be translucent."""
-    _properties = None
+    _color = None
     _properties = ('color',)
 
 
-class Image(_DateTimeAware):
-    """Fills the surface with an image."""
-    _image = None
-    _properties = ('image',)
+class PolylineGlow(_CZMLBaseObject):
+    """Colors the line with a glowing color."""
+    _color = None
+    _glowPower = None
+    _properties = ('color', 'glowPower',)
+
+
+class PolylineOutline(_CZMLBaseObject):
+    """Colors the line with a color and outline."""
+    _color = None
+    _outlineColor = None
+    _outlineWidth = None
+    _properties = ('color', 'outlineColor', 'outlineWidth',)
 
 
 class Material(_CZMLBaseObject):
     """The material to use to fill the polygon."""
+    _grid = None
     _image = None
+    _stripe = None
     _solidColor = None
+    _polylineGlow = None
+    _polylineOutline = None
 
-    _properties = ('image', 'solidColor')
+    _properties = ('grid', 'image', 'stripe', 'solidColor', 'polylineGlow', 'polylineOutline')
 
+    grid = class_property(Grid, 'grid',
+                          doc="""Fills the surface with a grid.
+                          """)
+    image = class_property(Image, 'image',
+                           doc="""The image to display on the surface.
+                           """)
+    stripe = class_property(Stripe, 'stripe',
+                            doc="""Fills the surface with alternating colors.
+                            """)
     solidColor = class_property(SolidColor, 'solidColor',
                                 doc="""Fills the surface with a solid color, which may be translucent.
                                 """)
-    image = class_property(Image, 'image',
-                           doc="""The image to display on the surface.
-
-    """)
+    polylineGlow = class_property(PolylineGlow, 'polylineGlow',
+                                  doc="""Colors the line with a glowing color.
+                                  """)
+    polylineOutline = class_property(PolylineOutline, 'polylineOutline',
+                                     doc="""Colors the line with a color and outline.
+                                     """)
 
 
 class Polygon(_CZMLBaseObject):
