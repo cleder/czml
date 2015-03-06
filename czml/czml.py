@@ -1113,102 +1113,130 @@ class Material(_CZMLBaseObject):
                                      """)
 
 
-class Polyline(_DateTimeAware, _CZMLBaseObject):
-    """ A polyline, which is a line in the scene composed of multiple segments.
-    """
-
-    show = None
-    width = None
-    followSurface = None
-
-    _material = None
-    material = class_property(Material, 'material',
-                              doc="""The material to use to draw the polyline.""")
-
-    _positions = None
-    positions = class_property(Positions, 'positions',
-                               doc="""The array of positions defining the polyline as a line strip.""");
-
-    _properties = ('show', 'width', 'followSurface', 'material', 'positions')
-
-
-class Path(_CZMLBaseObject):
+class Path(_DateTimeAware, _CZMLBaseObject):
     """A path, which is a polyline defined by the motion of an object over
     time. The possible vertices of the path are specified by the position
     property."""
-
     show = None
 
-    _color = None
-    color = class_property(Color, 'color')
+    _width = None
+    width = class_property(Number, 'width');
+    
+    _leadTime = None
+    leadTime = class_property(Number, 'leadTime');
 
-    resolution = None
-    outlineWidth = None
-    leadTime = None
-    trailTime = None
-    width = None
+    _trailTime = None
+    trailTime = class_property(Number, 'trailTime');
 
-    _position = None
-    position = class_property(Position, 'position')
+    _resolution = None
+    resolution = class_property(Number, 'resolution');
 
-    @property
-    def properties(self):
-        return super(Path, self).properties + ('show', 'color', 'resolution',
-                                               'outlineWidth', 'leadTime',
-                                               'trailTime', 'position', 'width')
-
-    def __init__(self, **kwargs):
-        if hasattr(kwargs, 'iteritems'):
-            iterator = kwargs.iteritems
-        elif hasattr(kwargs, 'items'):
-            iterator = kwargs.items
-        for k, v in iterator():
-            if k in self._properties:
-                setattr(self, k, v)
-            else:
-                raise ValueError('Key word %s not known' % k)
-
-
-class Polygon(_CZMLBaseObject):
-    """A polygon, which is a closed figure on the surface of the Earth.
-    The vertices of the polygon are specified by the positions property.
-    """
-    show = None
-    positions = None
     _material = None
-    _properties = ('material', 'positions', 'show')
-
-    def __init__(self, color=None, **kwargs):
-        if color:
-            self.material = {"solidColor":{"color": color}}
-        super(Polygon, self).__init__(**kwargs)
-
     material = class_property(Material, 'material')
 
+    _position = None
+    position = class_property(Position, 'position');
 
-class Ellipse(_CZMLBaseObject):
-    """
-    An ellipse, which is a closed curve on the surface of the Earth. The
-    ellipse is positioned using the position property.
+    _properties = ('show', 'width', 'leadTime', 'trailTime',
+                   'resolution', 'material', 'position')
 
-    Note that this requires a polygon or polyline to actually get drawn!
+
+class Polyline(_DateTimeAware, _CZMLBaseObject):
+    """ A polyline, which is a line in the scene composed of multiple segments.
     """
-    _properties = ('semiMajorAxis', 'semiMinorAxis', 'bearing')
-    _bearing = None
+    show = None
+    followSurface = None
+
+    _width = None
+    width = class_property(Number, 'width');
+
+    _material = None
+    material = class_property(Material, 'material')
+
+    _positions = None
+    positions = class_property(Positions, 'positions');
+
+    _properties = ('show', 'followSurface', 'width', 'material', 'positions')
+
+
+class Polygon(_DateTimeAware, _CZMLBaseObject):
+    """A polygon, which is a closed figure on the surface of the Earth.
+    """
+    show = None
+    fill = None
+    outline = None
+    perPositionHeight = None
+
+    _height = None
+    height = class_property(Number, 'height')
+
+    _stRotation = None
+    stRotation = class_property(Number, 'stRotation')
+
+    _granularity = None
+    granularity = class_property(Number, 'granularity')
+
+    _extrudedHeight = None
+    extrudedHeight = class_property(Number, 'extrudedHeight')
+    
+    _outlineColor = None
+    outlineColor = class_property(Color, 'outlineColor')
+
+    _material = None
+    material = class_property(Material, 'material')
+
+    _positions = None
+    positions = class_property(Positions, 'positions');
+
+    _properties = ('show', 'fill', 'height', 'outline', 'stRotation',
+                   'granularity', 'extrudedHeight', 'perPositionHeight',
+                   'outlineColor', 'material', 'positions')
+
+
+class Ellipse(_DateTimeAware, _CZMLBaseObject):
+    """An ellipse, which is a closed curve on the surface of the Earth.
+       The ellipse is positioned using the position property.
+    """
+    show = None
+    fill = None
+    outline = None
+
+    _height = None
+    height = class_property(Number, 'height')
+
+    _rotation = None
+    rotation = class_property(Number, 'rotation')
+
+    _stRotation = None
+    stRotation = class_property(Number, 'stRotation')
+
+    _granularity = None
+    granularity = class_property(Number, 'granularity')
+
     _semiMajorAxis = None
+    semiMajorAxis = class_property(Number, 'semiMajorAxis')
+
     _semiMinorAxis = None
+    semiMinorAxis = class_property(Number, 'semiMinorAxis')
 
-    bearing = class_property(Number, 'bearing', doc="""
-    The angle from north (clockwise) in radians.
-    """)
+    _extrudedHeight = None
+    extrudedHeight = class_property(Number, 'extrudedHeight')
 
-    semiMajorAxis = class_property(Number, 'semiMajorAxis', doc="""
-    The length of the ellipse's semi-major axis in meters.
-    """)
+    _numberOfVerticalLines = None
+    numberOfVerticalLines = class_property(Number, 'numberOfVerticalLines')
+    
+    _outlineColor = None
+    outlineColor = class_property(Color, 'outlineColor')
 
-    semiMinorAxis = class_property(Number, 'semiMinorAxis', doc="""
-    The length of the ellipse's semi-minor axis in meters.
-    """)
+    _material = None
+    material = class_property(Material, 'material')
+
+    _position = None
+    position = class_property(Position, 'position');
+
+    _properties = ('show', 'fill', 'outline', 'height', 'rotation', 'stRotation',
+                   'granularity', 'extrudedHeight', 'semiMajorAxis', 'semiMinorAxis',
+                   'numberOfVerticalLines', 'outlineColor', 'material', 'position')
 
 
 class Ellipsoid(_DateTimeAware):
