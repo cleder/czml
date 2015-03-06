@@ -118,10 +118,9 @@ def datetime_property(name, allow_offset=False, doc=None):
 
     return property(getter, setter, doc=doc)
 
-# We make lots of material properties.
-material_property = lambda x: class_property(Material, x, doc=
-    """The material to use to fill in the object you are creating.
-    """)
+# Many classes will have material and position properties.
+material_property = lambda x: class_property(Material, x)
+position_property = lambda x: class_property(Position, x)
 
 
 class _CZMLBaseObject(object):
@@ -1035,136 +1034,6 @@ class Label(_CZMLBaseObject):
         self.text = data.get('text', None)
 
 
-class Polyline(_CZMLBaseObject):
-    """ A polyline, which is a line in the scene composed of multiple segments.
-    The vertices of the polyline are specified by the vertexPositions property.
-    """
-
-    # Whether or not the polyline is shown.
-    show = False
-
-    _color = None
-    _outlineColor = None
-
-    # The width of the outline of the polyline.
-    outlineWidth = None
-
-    # The width of the polyline.
-    width = None
-
-    def __init__(self, show=False, color=None, width=None,
-                outlineColor=None, outlineWidth=None):
-        self.show = show
-        self.color = color
-        self.width = width
-        self.outlineColor = outlineColor
-        self.outlineWidth = outlineWidth
-
-
-
-    @property
-    def color(self):
-        """The color of the polyline."""
-        if self._color is not None:
-            return self._color.data()
-
-    @color.setter
-    def color(self, color):
-        if isinstance(color, Color):
-            self._color = color
-        elif isinstance(color, dict):
-            col = Color()
-            col.load(color)
-            self._color = col
-        elif color is None:
-            self._color = None
-        else:
-            raise TypeError
-
-    @property
-    def outlineColor(self):
-        """The color of the outline of the polyline."""
-        if self._outlineColor is not None:
-            return self._outlineColor.data()
-
-    @outlineColor.setter
-    def outlineColor(self, color):
-        if isinstance(color, Color):
-            self._outlineColor = color
-        elif isinstance(color, dict):
-            col = Color()
-            col.load(color)
-            self._outlineColor = col
-        elif color is None:
-            self._outlineColor = None
-        else:
-            raise TypeError
-
-
-
-
-    def data(self):
-        d = {}
-        if self.show:
-            d['show'] = True
-        if self.show == False:
-            d['show'] = False
-        if self.color:
-            d['color'] = self.color
-        if self.width:
-            d['width'] = self.width
-        if self.outlineColor:
-            d['outlineColor'] = self.outlineColor
-        if self.outlineWidth:
-            d['outlineWidth'] = self.outlineWidth
-
-        return d
-
-    def load(self, data):
-        self.show = data.get('show', None)
-        self.color = data.get('color', None)
-        self.outlineColor = data.get('outlineColor', None)
-        self.width = data.get('width', None)
-        self.outlineWidth = data.get('outlineWidth', None)
-
-
-class Path(_CZMLBaseObject):
-    """A path, which is a polyline defined by the motion of an object over
-    time. The possible vertices of the path are specified by the position
-    property."""
-
-    show = None
-
-    _color = None
-    color = class_property(Color, 'color')
-
-    resolution = None
-    outlineWidth = None
-    leadTime = None
-    trailTime = None
-    width = None
-
-    _position = None
-    position = class_property(Position, 'position')
-
-    @property
-    def properties(self):
-        return super(Path, self).properties + ('show', 'color', 'resolution',
-                                               'outlineWidth', 'leadTime',
-                                               'trailTime', 'position', 'width')
-
-    def __init__(self, **kwargs):
-        if hasattr(kwargs, 'iteritems'):
-            iterator = kwargs.iteritems
-        elif hasattr(kwargs, 'items'):
-            iterator = kwargs.items
-        for k, v in iterator():
-            if k in self._properties:
-                setattr(self, k, v)
-            else:
-                raise ValueError('Key word %s not known' % k)
-
-
 class Grid(_CZMLBaseObject):
     """Fills the surface with a grid."""
     _color = None
@@ -1242,6 +1111,62 @@ class Material(_CZMLBaseObject):
     polylineOutline = class_property(PolylineOutline, 'polylineOutline',
                                      doc="""Colors the line with a color and outline.
                                      """)
+
+
+class Polyline(_DateTimeAware, _CZMLBaseObject):
+    """ A polyline, which is a line in the scene composed of multiple segments.
+    """
+
+    show = None
+    width = None
+    followSurface = None
+
+    _material = None
+    material = class_property(Material, 'material',
+                              doc="""The material to use to draw the polyline.""")
+
+    _positions = None
+    positions = class_property(Positions, 'positions',
+                               doc="""The array of positions defining the polyline as a line strip.""");
+
+    _properties = ('show', 'width', 'followSurface', 'material', 'positions')
+
+
+class Path(_CZMLBaseObject):
+    """A path, which is a polyline defined by the motion of an object over
+    time. The possible vertices of the path are specified by the position
+    property."""
+
+    show = None
+
+    _color = None
+    color = class_property(Color, 'color')
+
+    resolution = None
+    outlineWidth = None
+    leadTime = None
+    trailTime = None
+    width = None
+
+    _position = None
+    position = class_property(Position, 'position')
+
+    @property
+    def properties(self):
+        return super(Path, self).properties + ('show', 'color', 'resolution',
+                                               'outlineWidth', 'leadTime',
+                                               'trailTime', 'position', 'width')
+
+    def __init__(self, **kwargs):
+        if hasattr(kwargs, 'iteritems'):
+            iterator = kwargs.iteritems
+        elif hasattr(kwargs, 'items'):
+            iterator = kwargs.items
+        for k, v in iterator():
+            if k in self._properties:
+                setattr(self, k, v)
+            else:
+                raise ValueError('Key word %s not known' % k)
 
 
 class Polygon(_CZMLBaseObject):
