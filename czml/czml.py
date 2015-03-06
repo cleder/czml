@@ -118,10 +118,9 @@ def datetime_property(name, allow_offset=False, doc=None):
 
     return property(getter, setter, doc=doc)
 
-# We make lots of material properties.
-material_property = lambda x: class_property(Material, x, doc=
-    """The material to use to fill in the object you are creating.
-    """)
+# Many classes will have material and position properties.
+material_property = lambda x: class_property(Material, x)
+position_property = lambda x: class_property(Position, x)
 
 
 class _CZMLBaseObject(object):
@@ -147,7 +146,7 @@ class _CZMLBaseObject(object):
             if a is not None:
                 # These classes have a data method that should be called.
                 if isinstance(a, (_CZMLBaseObject, _Colors,
-                                  _Coordinates, _VPositions)):
+                                  _Coordinates, _Positions)):
                     d[attr] = a.data()
                 else:
                     d[attr] = a
@@ -708,7 +707,53 @@ class Billboard(_CZMLBaseObject):
         self.scale = data.get('scale', None)
         self.color = data.get('color', None)
 
-class _VPositions(object):
+class Clock(_CZMLBaseObject):
+    """The clock settings for the entire data set. Only valid on the
+    document object."""
+
+    # The current time.
+    currentTime = None
+
+    # The multiplier, which in TICK_DEPENDENT mode is the number of seconds
+    # to advance each tick. In SYSTEM_CLOCK_DEPENDENT mode, it is the
+    # multiplier applied to the amount of time elapsed between ticks.
+    # This value is ignored in SYSTEM_CLOCK mode.
+    multiplier = None
+
+    # The behavior of a clock when its current time reaches its start or
+    # end points. Valid values are 'UNBOUNDED', 'CLAMPED', and 'LOOP_STOP'.
+    range = None
+
+    # Defines how a clock steps in time. Valid values are 'SYSTEM_CLOCK',
+    # 'SYSTEM_CLOCK_MULTIPLIER', and 'TICK_DEPENDENT'.
+    step = None
+
+    def __init__(self, currentTime=None, multiplier=None, range=None, step=None):
+        self.currentTime = currentTime
+        self.multiplier = multiplier
+        self.range = range
+        self.step = step
+
+    def data(self):
+        d = {}
+        if self.currentTime:
+            d['currentTime'] = self.currentTime
+        if self.multiplier:
+            d['multiplier'] = self.multiplier
+        if self.range:
+            d['range'] = self.range
+        if self.step:
+            d['step'] = self.step
+        return d
+
+    def load(self, data):
+        self.currentTime = data.get('currentTime', None)
+        self.multiplier = data.get('multiplier', None)
+        self.range = data.get('range', None)
+        self.step = data.get('step', None)
+
+
+class _Positions(object):
     """ The list of positions [X, Y, Z, X, Y, Z, ...] """
 
     coords = None
@@ -741,7 +786,7 @@ class _VPositions(object):
         return self.coords
 
 
-class VertexPositions(_CZMLBaseObject):
+class Positions(_CZMLBaseObject):
     """The world-space positions of vertices.
     The vertex positions have no direct visual representation, but they
     are used to define polygons, polylines, and other objects attached
@@ -789,7 +834,7 @@ class VertexPositions(_CZMLBaseObject):
     @cartesian.setter
     def cartesian(self, geom):
         if geom is not None:
-            self._cartesian = _VPositions(geom)
+            self._cartesian = _Positions(geom)
         else:
             self._cartesian = None
 
@@ -804,7 +849,7 @@ class VertexPositions(_CZMLBaseObject):
     @cartographicDegrees.setter
     def cartographicDegrees(self, geom):
         if geom is not None:
-            self._cartographicDegrees = _VPositions(geom)
+            self._cartographicDegrees = _Positions(geom)
         else:
             self._cartographicDegrees = None
 
@@ -820,7 +865,7 @@ class VertexPositions(_CZMLBaseObject):
     @cartographicRadians.setter
     def cartographicRadians(self, geom):
         if geom is not None:
-            self._cartographicRadians = _VPositions(geom)
+            self._cartographicRadians = _Positions(geom)
         else:
             self._cartographicRadians = None
 
@@ -989,136 +1034,6 @@ class Label(_CZMLBaseObject):
         self.text = data.get('text', None)
 
 
-class Polyline(_CZMLBaseObject):
-    """ A polyline, which is a line in the scene composed of multiple segments.
-    The vertices of the polyline are specified by the vertexPositions property.
-    """
-
-    # Whether or not the polyline is shown.
-    show = False
-
-    _color = None
-    _outlineColor = None
-
-    # The width of the outline of the polyline.
-    outlineWidth = None
-
-    # The width of the polyline.
-    width = None
-
-    def __init__(self, show=False, color=None, width=None,
-                outlineColor=None, outlineWidth=None):
-        self.show = show
-        self.color = color
-        self.width = width
-        self.outlineColor = outlineColor
-        self.outlineWidth = outlineWidth
-
-
-
-    @property
-    def color(self):
-        """The color of the polyline."""
-        if self._color is not None:
-            return self._color.data()
-
-    @color.setter
-    def color(self, color):
-        if isinstance(color, Color):
-            self._color = color
-        elif isinstance(color, dict):
-            col = Color()
-            col.load(color)
-            self._color = col
-        elif color is None:
-            self._color = None
-        else:
-            raise TypeError
-
-    @property
-    def outlineColor(self):
-        """The color of the outline of the polyline."""
-        if self._outlineColor is not None:
-            return self._outlineColor.data()
-
-    @outlineColor.setter
-    def outlineColor(self, color):
-        if isinstance(color, Color):
-            self._outlineColor = color
-        elif isinstance(color, dict):
-            col = Color()
-            col.load(color)
-            self._outlineColor = col
-        elif color is None:
-            self._outlineColor = None
-        else:
-            raise TypeError
-
-
-
-
-    def data(self):
-        d = {}
-        if self.show:
-            d['show'] = True
-        if self.show == False:
-            d['show'] = False
-        if self.color:
-            d['color'] = self.color
-        if self.width:
-            d['width'] = self.width
-        if self.outlineColor:
-            d['outlineColor'] = self.outlineColor
-        if self.outlineWidth:
-            d['outlineWidth'] = self.outlineWidth
-
-        return d
-
-    def load(self, data):
-        self.show = data.get('show', None)
-        self.color = data.get('color', None)
-        self.outlineColor = data.get('outlineColor', None)
-        self.width = data.get('width', None)
-        self.outlineWidth = data.get('outlineWidth', None)
-
-
-class Path(_CZMLBaseObject):
-    """A path, which is a polyline defined by the motion of an object over
-    time. The possible vertices of the path are specified by the position
-    property."""
-
-    show = None
-
-    _color = None
-    color = class_property(Color, 'color')
-
-    resolution = None
-    outlineWidth = None
-    leadTime = None
-    trailTime = None
-    width = None
-
-    _position = None
-    position = class_property(Position, 'position')
-
-    @property
-    def properties(self):
-        return super(Path, self).properties + ('show', 'color', 'resolution',
-                                               'outlineWidth', 'leadTime',
-                                               'trailTime', 'position', 'width')
-
-    def __init__(self, **kwargs):
-        if hasattr(kwargs, 'iteritems'):
-            iterator = kwargs.iteritems
-        elif hasattr(kwargs, 'items'):
-            iterator = kwargs.items
-        for k, v in iterator():
-            if k in self._properties:
-                setattr(self, k, v)
-            else:
-                raise ValueError('Key word %s not known' % k)
-
-
 class Grid(_CZMLBaseObject):
     """Fills the surface with a grid."""
     _color = None
@@ -1198,46 +1113,130 @@ class Material(_CZMLBaseObject):
                                      """)
 
 
-class Polygon(_CZMLBaseObject):
-    """A polygon, which is a closed figure on the surface of the Earth.
-    The vertices of the polygon are specified by the vertexPositions property.
-    """
+class Path(_DateTimeAware, _CZMLBaseObject):
+    """A path, which is a polyline defined by the motion of an object over
+    time. The possible vertices of the path are specified by the position
+    property."""
     show = None
-    vertexPositions = None
+
+    _width = None
+    width = class_property(Number, 'width');
+    
+    _leadTime = None
+    leadTime = class_property(Number, 'leadTime');
+
+    _trailTime = None
+    trailTime = class_property(Number, 'trailTime');
+
+    _resolution = None
+    resolution = class_property(Number, 'resolution');
+
     _material = None
-    _properties = ('material', 'vertexPositions', 'show')
-
-    def __init__(self, color=None, **kwargs):
-        if color:
-            self.material = {"solidColor":{"color": color}}
-        super(Polygon, self).__init__(**kwargs)
-
     material = class_property(Material, 'material')
 
+    _position = None
+    position = class_property(Position, 'position');
 
-class Ellipse(_CZMLBaseObject):
-    """
-    An ellipse, which is a closed curve on the surface of the Earth. The
-    ellipse is positioned using the position property.
+    _properties = ('show', 'width', 'leadTime', 'trailTime',
+                   'resolution', 'material', 'position')
 
-    Note that this requires a polygon or polyline to actually get drawn!
+
+class Polyline(_DateTimeAware, _CZMLBaseObject):
+    """ A polyline, which is a line in the scene composed of multiple segments.
     """
-    _properties = ('semiMajorAxis', 'semiMinorAxis', 'bearing')
-    _bearing = None
+    show = None
+    followSurface = None
+
+    _width = None
+    width = class_property(Number, 'width');
+
+    _material = None
+    material = class_property(Material, 'material')
+
+    _positions = None
+    positions = class_property(Positions, 'positions');
+
+    _properties = ('show', 'followSurface', 'width', 'material', 'positions')
+
+
+class Polygon(_DateTimeAware, _CZMLBaseObject):
+    """A polygon, which is a closed figure on the surface of the Earth.
+    """
+    show = None
+    fill = None
+    outline = None
+    perPositionHeight = None
+
+    _height = None
+    height = class_property(Number, 'height')
+
+    _stRotation = None
+    stRotation = class_property(Number, 'stRotation')
+
+    _granularity = None
+    granularity = class_property(Number, 'granularity')
+
+    _extrudedHeight = None
+    extrudedHeight = class_property(Number, 'extrudedHeight')
+    
+    _outlineColor = None
+    outlineColor = class_property(Color, 'outlineColor')
+
+    _material = None
+    material = class_property(Material, 'material')
+
+    _positions = None
+    positions = class_property(Positions, 'positions');
+
+    _properties = ('show', 'fill', 'height', 'outline', 'stRotation',
+                   'granularity', 'extrudedHeight', 'perPositionHeight',
+                   'outlineColor', 'material', 'positions')
+
+
+class Ellipse(_DateTimeAware, _CZMLBaseObject):
+    """An ellipse, which is a closed curve on the surface of the Earth.
+       The ellipse is positioned using the position property.
+    """
+    show = None
+    fill = None
+    outline = None
+
+    _height = None
+    height = class_property(Number, 'height')
+
+    _rotation = None
+    rotation = class_property(Number, 'rotation')
+
+    _stRotation = None
+    stRotation = class_property(Number, 'stRotation')
+
+    _granularity = None
+    granularity = class_property(Number, 'granularity')
+
     _semiMajorAxis = None
+    semiMajorAxis = class_property(Number, 'semiMajorAxis')
+
     _semiMinorAxis = None
+    semiMinorAxis = class_property(Number, 'semiMinorAxis')
 
-    bearing = class_property(Number, 'bearing', doc="""
-    The angle from north (clockwise) in radians.
-    """)
+    _extrudedHeight = None
+    extrudedHeight = class_property(Number, 'extrudedHeight')
 
-    semiMajorAxis = class_property(Number, 'semiMajorAxis', doc="""
-    The length of the ellipse's semi-major axis in meters.
-    """)
+    _numberOfVerticalLines = None
+    numberOfVerticalLines = class_property(Number, 'numberOfVerticalLines')
+    
+    _outlineColor = None
+    outlineColor = class_property(Color, 'outlineColor')
 
-    semiMinorAxis = class_property(Number, 'semiMinorAxis', doc="""
-    The length of the ellipse's semi-minor axis in meters.
-    """)
+    _material = None
+    material = class_property(Material, 'material')
+
+    _position = None
+    position = class_property(Position, 'position');
+
+    _properties = ('show', 'fill', 'outline', 'height', 'rotation', 'stRotation',
+                   'granularity', 'extrudedHeight', 'semiMajorAxis', 'semiMinorAxis',
+                   'numberOfVerticalLines', 'outlineColor', 'material', 'position')
 
 
 class Ellipsoid(_DateTimeAware):
@@ -1368,10 +1367,12 @@ class CZMLPacket(_CZMLBaseObject):
 
     _billboard = None
 
+    _clock = None
+
     # The world-space positions of vertices. The vertex positions have no
     # direct visual representation, but they are used to define polygons,
     # polylines, and other objects attached to the object.
-    _vertexPositions = None
+    _positions = None
 
     # The orientation of the object in the world. The orientation has no
     # direct visual representation, but it is used to orient models,
@@ -1383,7 +1384,7 @@ class CZMLPacket(_CZMLBaseObject):
     _label = None
 
     # A polyline, which is a line in the scene composed of multiple segments.
-    # The vertices of the polyline are specified by the vertexPositions
+    # The vertices of the polyline are specified by the positions
     # property.
     _polyline = None
 
@@ -1394,7 +1395,7 @@ class CZMLPacket(_CZMLBaseObject):
     path = class_property(Path, 'path')
 
     # A polygon, which is a closed figure on the surface of the Earth.
-    # The vertices of the polygon are specified by the vertexPositions
+    # The vertices of the polygon are specified by the positions
     # property.
     _polygon = None
 
@@ -1498,6 +1499,26 @@ class CZMLPacket(_CZMLBaseObject):
             raise TypeError
 
     @property
+    def clock(self):
+        """The clock settings for the entire data set. Only valid on the
+        document object."""
+        if self._clock is not None:
+            return self._clock.data()
+
+    @clock.setter
+    def clock(self, clock):
+        if isinstance(clock, Clock):
+            self._clock = clock
+        elif isinstance(clock, dict):
+            c = Clock()
+            c.load(clock)
+            self._clock = c
+        elif clock is None:
+            self._clock = None
+        else:
+            raise TypeError
+
+    @property
     def orientation(self):
         """An orientation"""
         if self._orientation is not None:
@@ -1537,24 +1558,24 @@ class CZMLPacket(_CZMLBaseObject):
             raise TypeError
 
     @property
-    def vertexPositions(self):
+    def positions(self):
         """The world-space positions of vertices.
         The vertex positions have no direct visual representation,
         but they are used to define polygons, polylines,
         and other objects attached to the object."""
-        if self._vertexPositions is not None:
-            return self._vertexPositions.data()
+        if self._positions is not None:
+            return self._positions.data()
 
-    @vertexPositions.setter
-    def vertexPositions(self, vpositions):
-        if isinstance(vpositions, VertexPositions):
-            self._vertexPositions = vpositions
+    @positions.setter
+    def positions(self, vpositions):
+        if isinstance(vpositions, Positions):
+            self._positions = vpositions
         elif isinstance(vpositions, dict):
-            p = VertexPositions()
+            p = Positions()
             p.load(vpositions)
-            self._vertexPositions = p
+            self._positions = p
         elif vpositions is None:
-            self._vertexPositions = None
+            self._positions = None
         else:
             raise TypeError
 
@@ -1562,7 +1583,7 @@ class CZMLPacket(_CZMLBaseObject):
     @property
     def polyline(self):
         """A polyline, which is a line in the scene composed of multiple segments.
-        The vertices of the polyline are specified by the vertexPositions
+        The vertices of the polyline are specified by the positions
         property."""
         if self._polyline is not None:
             return self._polyline.data()
@@ -1583,7 +1604,7 @@ class CZMLPacket(_CZMLBaseObject):
     @property
     def polygon(self):
         """A polygon, which is a closed figure on the surface of the Earth.
-        The vertices of the polygon are specified by the vertexPositions
+        The vertices of the polygon are specified by the positions
         property."""
 
         if self._polygon is not None:
@@ -1605,7 +1626,7 @@ class CZMLPacket(_CZMLBaseObject):
     @property
     def cone(self):
         """A polygon, which is a closed figure on the surface of the Earth.
-        The vertices of the polygon are specified by the vertexPositions
+        The vertices of the polygon are specified by the positions
         property."""
 
         if self._cone is not None:
@@ -1633,6 +1654,8 @@ class CZMLPacket(_CZMLBaseObject):
             d['availability'] = self.availability
         if self.billboard is not None:
             d['billboard'] = self.billboard
+        if self.clock is not None:
+            d['clock'] = self.clock
         if self.position is not None:
             d['position'] = self.position
         if self.orientation is not None:
@@ -1641,8 +1664,8 @@ class CZMLPacket(_CZMLBaseObject):
             d['label'] = self.label
         if self.point  is not None:
             d['point'] = self.point
-        if self.vertexPositions  is not None:
-            d['vertexPositions'] = self.vertexPositions
+        if self.positions  is not None:
+            d['positions'] = self.positions
         if self.polyline  is not None:
             d['polyline'] = self.polyline
         if self.polygon  is not None:
@@ -1662,10 +1685,11 @@ class CZMLPacket(_CZMLBaseObject):
         self.id = data.get('id', None)
         # self.availability = data.get('availability', None)
         self.billboard = data.get('billboard', None)
+        self.clock = data.get('clock', None)
         self.position = data.get('position', None)
         self.label = data.get('label', None)
         self.point = data.get('point', None)
-        self.vertexPositions = data.get('vertexPositions', None)
+        self.positions = data.get('positions', None)
         self.polyline = data.get('polyline', None)
         self.polygon = data.get('polygon', None)
 

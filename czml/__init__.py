@@ -16,8 +16,9 @@
 #    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 from .czml import CZML, CZMLPacket
-from .czml import Position, Color, Billboard, Label, Point, SolidColor
-from .czml import VertexPositions, Polyline, Polygon, Material, Ellipse
+from .czml import Position, Color, Billboard, Label, Point
+from .czml import Grid, Image, Stripe, SolidColor, PolylineGlow, PolylineOutline
+from .czml import Positions, Polyline, Polygon, Material, Ellipse
 from .czml import Path, Ellipsoid, Number, Radii, Orientation
 from .utils import hexcolor_to_rgba
 

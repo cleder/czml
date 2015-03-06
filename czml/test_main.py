@@ -37,6 +37,7 @@ from pygeoif import geometry
 class BaseClassesTestCase(unittest.TestCase):
 
     def test_DateTimeAware(self):
+
         dtob = czml._DateTimeAware()
         now = datetime.now()
         est_now = eastern.localize(now)
@@ -107,6 +108,7 @@ class BaseClassesTestCase(unittest.TestCase):
         self.assertEqual(dtob.data(), json.loads(est_jst))
 
     def test_Coordinates(self):
+
         coord = czml._Coordinates([0, 1])
         self.assertEqual(len(coord.coords), 1)
         self.assertEqual(coord.coords[0].x, 0)
@@ -166,9 +168,11 @@ class BaseClassesTestCase(unittest.TestCase):
 
 
     def testScale(self):
+
         pass
 
     def testColor(self):
+
         col = czml.Color()
         col.rgba = [0, 255, 127]
         self.assertEqual(col.rgba, [0, 255, 127, 1])
@@ -192,6 +196,7 @@ class BaseClassesTestCase(unittest.TestCase):
         self.assertEqual(col.data(), col2.data())
 
     def test_hexcolor_to_rgba(self):
+
         col = '0000'
         ashex = utils.hexcolor_to_rgba
         self.assertEqual(ashex(col), (0, 0, 0, 0))
@@ -222,6 +227,7 @@ class BaseClassesTestCase(unittest.TestCase):
 class CzmlClassesTestCase(unittest.TestCase):
 
     def testPosition(self):
+
         pos = czml.Position()
         now = datetime.now()
         pos.epoch = now
@@ -229,12 +235,14 @@ class CzmlClassesTestCase(unittest.TestCase):
         pos.cartographicRadians = coords
         self.assertEqual(pos.data()['cartographicRadians'],
             coords)
+
         js = {'epoch': now.isoformat(), 'cartographicRadians': coords}
         self.assertEqual(pos.data(), js)
         self.assertEqual(pos.dumps(), json.dumps(js))
         pos.cartographicDegrees = coords
         self.assertEqual(pos.data()['cartographicDegrees'],
             coords)
+
         pos.cartesian = coords
         self.assertEqual(pos.data()['cartesian'],
             coords)
@@ -243,6 +251,7 @@ class CzmlClassesTestCase(unittest.TestCase):
         self.assertEqual(pos.data(), pos2.data())
 
     def testRadii(self):
+
         pos = czml.Radii()
         now = datetime.now()
         pos.epoch = now
@@ -250,27 +259,33 @@ class CzmlClassesTestCase(unittest.TestCase):
         pos.cartesian = coords
         self.assertEqual(pos.data()['cartesian'],
             coords)
+
         js = {'epoch': now.isoformat(), 'cartesian': coords}
         self.assertEqual(pos.data(), js)
         self.assertEqual(pos.dumps(), json.dumps(js))
+
         pos.cartographicDegrees = coords
         self.assertEqual(pos.data()['cartesian'],
             coords)
+
         pos2 = czml.Radii()
         pos2.loads(pos.dumps())
         self.assertEqual(pos.data(), pos2.data())
 
     def testPoint(self):
+
         point = czml.Point()
         point.color = {'rgba': [0, 255, 127, 55]}
         self.assertEqual(point.data(), {'color':
                 {'rgba': [0, 255, 127, 55]},
                 'show': False})
+
         point.outlineColor = {'rgbaf': [0.0, 0.255, 0.127, 0.55]}
         self.assertEqual(point.data(), {'color':
                     {'rgba': [0, 255, 127, 55]},
                     'outlineColor': {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
                     'show': False})
+
         point.pixelSize = 10
         point.outlineWidth = 2
         point.show = True
@@ -281,22 +296,27 @@ class CzmlClassesTestCase(unittest.TestCase):
                         {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
                     'outlineWidth': 2,
                     'show': True})
+
         p2 = czml.Point()
         p2.loads(point.dumps())
         self.assertEqual(point.data(), p2.data())
 
     def testLabel(self):
+
         l = czml.Label()
         l.text = 'test label'
         l.show = False
         self.assertEqual(l.data(), {'text': 'test label', 'show': False})
+
         l.show = True
         self.assertEqual(l.data(), {'text': 'test label', 'show': True})
+
         l2 = czml.Label()
         l2.loads(l.dumps())
         self.assertEqual(l.data(), l2.data())
 
     def testBillboard(self):
+
         bb = czml.Billboard()
         bb.image = 'http://localhost/img.png'
         bb.scale = 0.7
@@ -306,20 +326,41 @@ class CzmlClassesTestCase(unittest.TestCase):
             {'image': 'http://localhost/img.png', 'scale': 0.7,
             'color': {'rgba': [0, 255, 127, 55]},
             'show': True})
+
         bb2 = czml.Billboard()
         bb2.loads(bb.dumps())
         self.assertEqual(bb.data(), bb2.data())
 
+    def testClock(self):
+
+        c = czml.Clock()
+        c.currentTime = '2017-08-21T16:50:00Z'
+        c.multiplier = 3
+        c.range = 'UNBOUNDED'
+        c.step = 'SYSTEM_CLOCK_MULTIPLIER'
+        self.assertEqual(c.data(),
+            {'currentTime': '2017-08-21T16:50:00Z',
+             'multiplier': 3,
+             'range': 'UNBOUNDED',
+             'step': 'SYSTEM_CLOCK_MULTIPLIER'})
+
+        c2 = czml.Clock()
+        c2.loads(c.dumps())
+        self.assertEqual(c.data(), c2.data())
+
     def testMaterial(self):
+
         red = czml.Color(rgba=(255, 0, 0, 64))
         mat = czml.Material()
         mat.solidColor = {'color': red}
         mat_dict = {'solidColor': {'color': {'rgba': [255, 0, 0, 64]}}}
         self.assertEqual(mat.data(), mat_dict)
+
         mat2 = czml.Material(**mat_dict)
         self.assertEqual(mat.data(), mat2.data())
 
     def testGrid(self):
+
         red = czml.Color(rgba=(255, 0, 0, 64))
         g = czml.Grid()
         g.color = red
@@ -330,19 +371,22 @@ class CzmlClassesTestCase(unittest.TestCase):
         g_dict = {'color': {'rgba': [255, 0, 0, 64]}, 'cellAlpha': 0.5, 'lineCount': 4,
                   'lineThickness': 1.5, 'lineOffset': 0.75}
         self.assertEqual(g.data(), g_dict)
+
         g2 = czml.Grid(**g_dict)
         self.assertEqual(g.data(), g2.data())
 
     def testImage(self):
-        i = czml.Image()
-        i.image = 'http://localhost/img.png'
+
+        i = czml.Image(image='http://localhost/img.png')
         i.repeat = 3
         i_dict = {'image': 'http://localhost/img.png', 'repeat': 3}
         self.assertEqual(i.data(), i_dict)
+
         i2 = czml.Image(**i_dict)
         self.assertEqual(i.data(), i2.data())
 
     def testStripe(self):
+
         red = czml.Color(rgba=(255, 0, 0, 64))
         grn = czml.Color(rgba=(0, 255, 0, 64))
         s = czml.Stripe()
@@ -354,29 +398,35 @@ class CzmlClassesTestCase(unittest.TestCase):
         s_dict = {'orientation': 'HORIZONTAL', 'evenColor': {'rgba': [255, 0, 0, 64]},
                   'oddColor': {'rgba': [0, 255, 0, 64]}, 'offset': 1.5, 'repeat': 3.6}
         self.assertEqual(s.data(), s_dict)
+
         s2 = czml.Stripe(**s_dict)
         self.assertEqual(s.data(), s2.data())
 
     def testSolidColor(self):
+
         red = czml.Color(rgba=(255, 0, 0, 64))
         sc = czml.SolidColor()
         sc.color = red
         sc_dict = {'color': {'rgba': [255, 0, 0, 64]}}
         self.assertEqual(sc.data(), sc_dict)
+
         sc2 = czml.SolidColor(**sc_dict)
         self.assertEqual(sc.data(), sc2.data())
 
     def testPolylineGlow(self):
+
         red = czml.Color(rgba=(255, 0, 0, 64))
         pg = czml.PolylineGlow()
         pg.color = red
         pg.glowPower = 0.25
         pg_dict = {'color': {'rgba': [255, 0, 0, 64]}, 'glowPower': 0.25}
         self.assertEqual(pg.data(), pg_dict)
+
         pg2 = czml.PolylineGlow(**pg_dict)
         self.assertEqual(pg.data(), pg2.data())
 
     def testPolylineOutline(self):
+
         red = czml.Color(rgba=(255, 0, 0, 64))
         grn = czml.Color(rgba=(0, 255, 0, 64))
         po = czml.PolylineOutline()
@@ -385,11 +435,13 @@ class CzmlClassesTestCase(unittest.TestCase):
         po.outlineWidth = 4
         po_dict = {'color': {'rgba': [255, 0, 0, 64]}, 'outlineColor': {'rgba': [0, 255, 0, 64]}, 'outlineWidth': 4}
         self.assertEqual(po.data(), po_dict)
+
         po2 = czml.PolylineOutline(**po_dict)
         self.assertEqual(po.data(), po2.data())
 
-    def testVertexPositions(self):
-        v = czml.VertexPositions()
+    def testPositions(self):
+
+        v = czml.Positions()
         l = geometry.LineString([(0, 0), (1, 1)])
         r = geometry.LinearRing([(0, 0), (1, 1), (1, 0), (0, 0)])
         ext = [(0, 0), (0, 2), (2, 2), (2, 0), (0, 0)]
@@ -405,57 +457,255 @@ class CzmlClassesTestCase(unittest.TestCase):
             [0.0, 0.0, 0, 0.0, 2.0, 0, 2.0, 2.0, 0, 2.0, 0.0, 0, 0.0, 0.0, 0],
             'cartographicDegrees':
             [0.0, 0.0, 0, 1.0, 1.0, 0, 1.0, 0.0, 0, 0.0, 0.0, 0]})
-        v2 = czml.VertexPositions()
+
+        v2 = czml.Positions()
         v2.loads(v.dumps())
         self.assertEqual(v.data(), v2.data())
+
         v.cartesian = None
         v.cartographicDegrees = None
         v.cartographicRadians = [0.0, 0.0, .0, 1.0, 1.0, 1.0]
         self.assertEqual(v.data(), {'cartographicRadians':
             [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]})
 
+    def testPath(self):
+
+        sc = czml.SolidColor(color={'rgba': [0, 255, 127, 55]})
+        m1 = czml.Material(solidColor=sc)
+        c1 = [0, -62, 141, 0,
+              2, -51, 143, 0,
+              4, -40, 145, 0]
+        v1 = czml.Position(cartographicDegrees=c1)
+        p1 = czml.Path(show=True, width=5, leadTime=2, trailTime=6,
+                       resolution=3, material=m1, position=v1)
+        self.assertEqual(p1.data(), {'show': True, 'width': 5, 'leadTime': 2,
+                                     'trailTime': 6, 'resolution': 3,
+                                     'material':
+                                         {'solidColor':
+                                              {'color': {'rgba': [0, 255, 127, 55]}},
+                                          },
+                                     'position':
+                                         {'cartographicDegrees': [0, -62, 141, 0,
+                                                                  2, -51, 143, 0,
+                                                                  4, -40, 145, 0]},
+                                                                  
+                                     })
+
+        p2 = czml.Path()
+        p2.loads(p1.dumps())
+        self.assertEqual(p2.data(), p1.data())
+
+        po = czml.PolylineOutline(color={'rgba': [0, 255, 127, 55]},
+                                  outlineColor={'rgba': [0, 55, 127, 255]},
+                                  outlineWidth=4)
+        m2 = czml.Material(polylineOutline=po)
+        c2 = [0, 1000, 7500, 90,
+              4, 2000, 6500, 50,
+              8, 3000, 5500, 20]
+        v2 = czml.Position(cartesian=c2)
+        p2.show = False
+        p2.material = m2
+        p2.position = v2
+        self.assertEqual(p2.data(), {'show': False, 'width': 5, 'leadTime': 2,
+                                     'trailTime': 6, 'resolution': 3,
+                                     'material':
+                                         {'polylineOutline':
+                                              {'color': {'rgba': [0, 255, 127, 55]},
+                                               'outlineColor': {'rgba': [0, 55, 127, 255]},
+                                               'outlineWidth': 4},
+                                          },
+                                     'position':
+                                         {'cartesian': [0, 1000, 7500, 90,
+                                                        4, 2000, 6500, 50,
+                                                        8, 3000, 5500, 20]},
+                                     })
+        
+
     def testPolyline(self):
-        p = czml.Polyline()
-        p.color = {'rgba': [0, 255, 127, 55]}
-        self.assertEqual(p.data(), {'color':
-                {'rgba': [0, 255, 127, 55]},
-                'show': False})
-        p.outlineColor = {'rgbaf': [0.0, 0.255, 0.127, 0.55]}
-        self.assertEqual(p.data(), {'color':
-                    {'rgba': [0, 255, 127, 55]},
-                    'outlineColor': {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
-                    'show': False})
-        p.width = 10
-        p.outlineWidth = 2
-        p.show = True
-        self.assertEqual(p.data(), {'color':
-                        {'rgba': [0, 255, 127, 55]},
-                    'width': 10,
-                    'outlineColor':
-                        {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
-                    'outlineWidth': 2,
-                    'show': True})
-        p2 = czml.Polyline()
-        p2.loads(p.dumps())
-        self.assertEqual(p.data(), p2.data())
+
+        sc = czml.SolidColor(color={'rgba': [0, 255, 127, 55]})
+        m1 = czml.Material(solidColor=sc)
+        c1 = geometry.LineString([(-162, 41, 0), (-151, 43, 0), (-140, 45, 0)])
+        v1 = czml.Positions(cartographicDegrees=c1)
+        p1 = czml.Polyline(show=True, width=5, followSurface=False, material=m1, positions=v1)
+        self.assertEqual(p1.data(), {'show': True, 'width': 5, 'followSurface': False,
+                                     'material':
+                                         {'solidColor':
+                                              {'color': {'rgba': [0, 255, 127, 55]}},
+                                          },
+                                     'positions':
+                                         {'cartographicDegrees': [-162, 41, 0,
+                                                                  -151, 43, 0,
+                                                                  -140, 45, 0]},
+                                                                  
+                                     })
+
+        pg = czml.PolylineGlow(color={'rgba': [0, 255, 127, 55]}, glowPower=0.25)
+        m2 = czml.Material(polylineGlow=pg)
+        c2 = geometry.LineString([(1.6, 5.3, 10), (2.4, 4.2, 20), (3.8, 3.1, 30)])
+        v2 = czml.Positions(cartographicRadians=c2)
+        p2 = czml.Polyline(show=False, width=7, followSurface=True, material=m2, positions=v2)
+        self.assertEqual(p2.data(), {'show': False, 'width': 7, 'followSurface': True,
+                                     'material':
+                                         {'polylineGlow':
+                                              {'color': {'rgba': [0, 255, 127, 55]},
+                                               'glowPower': 0.25},
+                                          },
+                                     'positions':
+                                         {'cartographicRadians': [1.6, 5.3, 10,
+                                                                  2.4, 4.2, 20,
+                                                                  3.8, 3.1, 30]},
+                                     })
+
+        p3 = czml.Polyline()
+        p3.loads(p2.dumps())
+        self.assertEqual(p3.data(), p2.data())
+
+        po = czml.PolylineOutline(color={'rgba': [0, 255, 127, 55]},
+                                  outlineColor={'rgba': [0, 55, 127, 255]},
+                                  outlineWidth=4)
+        m3 = czml.Material(polylineOutline=po)
+        c3 = geometry.LineString([(1000, 7500, 90), (2000, 6500, 50), (3000, 5500, 20)])
+        v3 = czml.Positions(cartesian=c3)
+        p3.material = m3
+        p3.positions = v3
+        self.assertEqual(p3.data(), {'show': False, 'width': 7, 'followSurface': True,
+                                     'material':
+                                         {'polylineOutline':
+                                              {'color': {'rgba': [0, 255, 127, 55]},
+                                               'outlineColor': {'rgba': [0, 55, 127, 255]},
+                                               'outlineWidth': 4},
+                                          },
+                                     'positions':
+                                         {'cartesian': [1000, 7500, 90,
+                                                        2000, 6500, 50,
+                                                        3000, 5500, 20]},
+                                     })
+
+
 
     def testPolygon(self):
-        p = czml.Polygon()
-        m = czml.Material()
-        sc = czml.SolidColor(color={'rgba': [0, 255, 127, 55]})
-        m.solidColor = sc
-        p.material = m
-        self.assertEqual(p.data(),
-            {'material':
-                {'solidColor':
-                    {'color': {'rgba': [0, 255, 127, 55]}}
-            }   }
-            )
-        p2 = czml.Polygon()
-        p2.loads(p.dumps())
-        self.assertEqual(p.data(), p2.data())
-        p3 = czml.Polygon(color={'rgba': [0, 255, 127, 55]})
-        self.assertEqual(p.data(), p3.data())
+
+        img = czml.Image(image='http://localhost/img.png', repeat=2)
+        mat = czml.Material(image=img)
+        pts = geometry.LineString([(50, 20, 2), (60, 30, 3), (50, 30, 4), (60, 20, 5)])
+        pos = czml.Positions(cartographicDegrees=pts)
+        col = {'rgba': [0, 255, 127, 55]}
+        pol = czml.Polygon(show=True, material=mat, positions=pos, perPositionHeight=True,
+                           fill=True, outline=True, outlineColor=col)
+        self.assertEqual(pol.data(), {'show': True, 'fill': True, 'outline': True,
+                                      'perPositionHeight': True,
+                                      'outlineColor': {'rgba': [0, 255, 127, 55]},
+                                      'material':
+                                          {'image':
+                                              {'image': 'http://localhost/img.png',
+                                               'repeat': 2},
+                                          },
+                                      'positions':
+                                          {'cartographicDegrees': [50, 20, 2,
+                                                                   60, 30, 3,
+                                                                   50, 30, 4,
+                                                                   60, 20, 5]},
+                                      })
+
+        pol2 = czml.Polygon()
+        pol2.loads(pol.dumps())
+        self.assertEqual(pol2.data(), pol.data())
+
+        grid = czml.Grid(color={'rgba': [0, 55, 127, 255]}, cellAlpha=0.4,
+                         lineCount=5, lineThickness=2, lineOffset=0.3)
+        mat2 = czml.Material(grid=grid)
+        pts2 = geometry.LineString([(1.5, 1.2, 0), (1.6, 1.3, 0), (1.5, 1.3, 0), (1.6, 1.2, 0)])
+        pos2 = czml.Positions(cartographicRadians=pts2)
+        pol2.material = mat2
+        pol2.positions = pos2
+        pol2.perPositionHeight = False
+        pol2.height = 7
+        pol2.extrudedHeight = 30
+        self.assertEqual(pol2.data(), {'show': True, 'fill': True, 'outline': True,
+                                       'perPositionHeight': False,
+                                       'height': 7, 'extrudedHeight': 30,
+                                       'outlineColor': {'rgba': [0, 255, 127, 55]},
+                                       'material':
+                                           {'grid':
+                                                {'color': {'rgba': [0, 55, 127, 255]},
+                                                 'cellAlpha': 0.4,
+                                                 'lineCount': 5,
+                                                 'lineThickness': 2,
+                                                 'lineOffset': 0.3},
+                                            },
+                                       'positions':
+                                           {'cartographicRadians': [1.5, 1.2, 0,
+                                                                    1.6, 1.3, 0,
+                                                                    1.5, 1.3, 0,
+                                                                    1.6, 1.2, 0]},
+                                       })
+
+
+    def testEllipse(self):
+
+        sc = czml.SolidColor(color={'rgba': [127, 127, 127, 255]})
+        mat1 = czml.Material(solidColor=sc)
+        pts1 = [50, 20, 2]
+        pos1 = czml.Position(cartographicDegrees=pts1)
+        ell1 = czml.Ellipse(show=True, fill=True, height=50, extrudedHeight=200,
+                            outline=True, outlineColor={'rgba': [0, 255, 127, 55]},
+                            semiMajorAxis=150, semiMinorAxis=75, numberOfVerticalLines=800,
+                            rotation=1.2, material=mat1, position=pos1)
+
+        self.assertEqual(ell1.data(), {'show': True, 'fill': True, 'outline': True,
+                                       'height': 50, 'extrudedHeight': 200, 'rotation': 1.2,
+                                       'semiMajorAxis': 150, 'semiMinorAxis': 75,
+                                       'numberOfVerticalLines': 800,
+                                       'outlineColor': {'rgba': [0, 255, 127, 55]},
+                                       'material':
+                                           {'solidColor':
+                                                {'color': {'rgba': [127, 127, 127, 255]}},
+                                            },
+                                       'position':
+                                           {'cartographicDegrees': [50, 20, 2]},
+                                       })
+
+        ell2 = czml.Ellipse()
+        ell2.loads(ell1.dumps())
+        self.assertEqual(ell2.data(), ell1.data())
+
+        strp = czml.Stripe(evenColor={'rgba': [127, 55, 255, 255]},
+                           oddColor={'rgba': [127, 255, 55, 127]},
+                           offset=1.3, repeat=64, orientation='VERTICAL')
+        mat2 = czml.Material(stripe=strp)
+        pts2 = [0, 1.5, 1.2, 0,
+                2, 1.6, 1.3, 0,
+                4, 1.5, 1.3, 0,
+                6, 1.6, 1.2, 0]
+        pos2 = czml.Position(cartographicRadians=pts2)
+        ell2.material = mat2
+        ell2.position = pos2
+        ell2.perPositionHeight = False
+        ell2.height = 7
+        ell2.extrudedHeight = 30
+        ell2.semiMajorAxis = 600
+        ell2.semiMinorAxis = 400
+        self.assertEqual(ell2.data(), {'show': True, 'fill': True, 'outline': True,
+                                       'height': 7, 'extrudedHeight': 30, 'rotation': 1.2,
+                                       'semiMajorAxis': 600, 'semiMinorAxis': 400,
+                                       'numberOfVerticalLines': 800,
+                                       'outlineColor': {'rgba': [0, 255, 127, 55]},
+                                       'material':
+                                           {'stripe':
+                                                {'evenColor': {'rgba': [127, 55, 255, 255]},
+                                                 'oddColor': {'rgba': [127, 255, 55, 127]},
+                                                 'offset': 1.3,
+                                                 'repeat': 64,
+                                                 'orientation': 'VERTICAL'},
+                                            },
+                                       'position':
+                                           {'cartographicRadians': [0, 1.5, 1.2, 0,
+                                                                    2, 1.6, 1.3, 0,
+                                                                    4, 1.5, 1.3, 0,
+                                                                    6, 1.6, 1.2, 0]},
+                                       })
+
 
     def testEllipsoid(self):
         ellipsoid_value = {'radii': {'cartesian': [1000.0, 2000.0, 3000.0]},
@@ -524,6 +774,20 @@ class CzmlClassesTestCase(unittest.TestCase):
         self.assertEqual(p.data(),
             {'billboard': {'image': 'http://localhost/img.png',
             'scale': 0.7, 'show': True}, 'id': 'abc'})
+        c = czml.Clock()
+        c.currentTime = '2017-08-21T16:50:00Z'
+        c.multiplier = 3
+        c.range = 'UNBOUNDED'
+        c.step = 'SYSTEM_CLOCK_MULTIPLIER'
+        p.clock = c
+        self.assertEqual(p.data(),
+                         {'billboard': {'image': 'http://localhost/img.png',
+                                        'scale': 0.7, 'show': True },
+                          'id': 'abc',
+                          'clock': {'currentTime': '2017-08-21T16:50:00Z',
+                                    'multiplier': 3, 'range': 'UNBOUNDED',
+                                    'step': 'SYSTEM_CLOCK_MULTIPLIER'},
+                          })
         p2 = czml.CZMLPacket(id='abc')
         p2.loads(p.dumps())
         self.assertEqual(p.data(), p2.data())
@@ -536,11 +800,15 @@ class CzmlClassesTestCase(unittest.TestCase):
         l.show = False
         p.label = l
         self.assertEqual(p.data(),
-            {'billboard': {'image': 'http://localhost/img.png',
-            'scale': 0.7, 'show': True}, 'id': 'abc',
-            'label': {'show': False, 'text': 'test label'},
-            'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]},
-            })
+                         {'billboard': {'image': 'http://localhost/img.png',
+                                        'scale': 0.7, 'show': True },
+                          'id': 'abc',
+                          'clock': {'currentTime': '2017-08-21T16:50:00Z',
+                                    'multiplier': 3, 'range': 'UNBOUNDED',
+                                    'step': 'SYSTEM_CLOCK_MULTIPLIER'},
+                          'label': {'show': False, 'text': 'test label'},
+                          'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]},
+                          })
         p2.loads(p.dumps())
         self.assertEqual(p.data(), p2.data())
         p3 = czml.CZMLPacket(id='cde')
@@ -551,51 +819,6 @@ class CzmlClassesTestCase(unittest.TestCase):
                                     'point': {'color':
                                         {'rgba': [0, 255, 127, 55]},
                                         'show': True}})
-        p32 = czml.CZMLPacket(id='abc')
-        p32.loads(p3.dumps())
-        self.assertEqual(p3.data(), p32.data())
-        p4 = czml.CZMLPacket(id='defg')
-
-        pl = czml.Polyline()
-        pl.color = {'rgba': [0, 255, 127, 55]}
-        pl.width = 10
-        pl.outlineWidth = 2
-        pl.show = True
-        v = czml.VertexPositions()
-        v.cartographicDegrees = [0.0, 0.0, .0, 1.0, 1.0, 1.0]
-        p4.vertexPositions = v
-        p4.polyline = pl
-        self.assertEqual(p4.data(),
-             {'polyline':
-                {'color': {'rgba': [0, 255, 127, 55]},
-                'width': 10,
-                'outlineWidth': 2,
-                'show': True},
-            'id': 'defg',
-            'vertexPositions':
-                {'cartographicDegrees':
-                    [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]}
-            })
-        p42 = czml.CZMLPacket(id='abc')
-        p42.loads(p4.dumps())
-        self.assertEqual(p4.data(), p42.data())
-        p5 = czml.CZMLPacket(id='efgh')
-        p5.vertexPositions = v
-        poly = czml.Polygon(color={'rgba': [0, 255, 127, 55]})
-        p5.polygon = poly
-        self.assertEqual(p5.data(),
-            {'polygon':
-                {'material':
-                    {'solidColor':
-                        {'color':
-                            {'rgba': [0, 255, 127, 55]}}}},
-                    'id': 'efgh',
-                    'vertexPositions':
-                        {'cartographicDegrees':
-                            [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]}})
-        p52 = czml.CZMLPacket(id='abc')
-        p52.loads(p5.dumps())
-        self.assertEqual(p5.data(), p52.data())
         return p
 
     def testCZML(self):
@@ -604,10 +827,15 @@ class CzmlClassesTestCase(unittest.TestCase):
         p = self.testCZMLPacket()
         cz.packets.append(p)
         self.assertEqual(list(cz.data()),
-            [{'billboard': {'image': 'http://localhost/img.png',
-            'scale': 0.7, 'show': True}, 'id': 'abc',
-            'label': {'show': False, 'text': 'test label'},
-            'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]}}])
+                         [{'billboard': {'image': 'http://localhost/img.png',
+                                         'scale': 0.7, 'show': True},
+                           'id': 'abc',
+                           'clock': {'currentTime': '2017-08-21T16:50:00Z',
+                                     'multiplier': 3, 'range': 'UNBOUNDED',
+                                     'step': 'SYSTEM_CLOCK_MULTIPLIER'},
+                           'label': {'show': False, 'text': 'test label'},
+                           'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]}
+                           }])
         cz1 = czml.CZML()
         cz1.loads(cz.dumps())
         self.assertEqual(list(cz.data()), list(cz1.data()))
