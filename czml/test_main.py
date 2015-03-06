@@ -403,8 +403,8 @@ class CzmlClassesTestCase(unittest.TestCase):
         po2 = czml.PolylineOutline(**po_dict)
         self.assertEqual(po.data(), po2.data())
 
-    def testVertexPositions(self):
-        v = czml.VertexPositions()
+    def testPositions(self):
+        v = czml.Positions()
         l = geometry.LineString([(0, 0), (1, 1)])
         r = geometry.LinearRing([(0, 0), (1, 1), (1, 0), (0, 0)])
         ext = [(0, 0), (0, 2), (2, 2), (2, 0), (0, 0)]
@@ -420,7 +420,7 @@ class CzmlClassesTestCase(unittest.TestCase):
             [0.0, 0.0, 0, 0.0, 2.0, 0, 2.0, 2.0, 0, 2.0, 0.0, 0, 0.0, 0.0, 0],
             'cartographicDegrees':
             [0.0, 0.0, 0, 1.0, 1.0, 0, 1.0, 0.0, 0, 0.0, 0.0, 0]})
-        v2 = czml.VertexPositions()
+        v2 = czml.Positions()
         v2.loads(v.dumps())
         self.assertEqual(v.data(), v2.data())
         v.cartesian = None
@@ -449,19 +449,27 @@ class CzmlClassesTestCase(unittest.TestCase):
                                      })
         pg = czml.PolylineGlow(color={'rgba': [0, 255, 127, 55]}, glowPower=0.25)
         m2 = czml.Material(polylineGlow=pg)
-        p2 = czml.Polyline(show=False, width=7, followSurface=True, material=m2)
+        c2 = geometry.LineString([(1.6, 5.3, 10), (2.4, 4.2, 20), (3.8, 3.1, 30)])
+        o2 = czml.Positions(cartographicRadians=c2)
+        p2 = czml.Polyline(show=False, width=7, followSurface=True, material=m2, positions=o2)
         self.assertEqual(p2.data(), {'show': False, 'width': 7, 'followSurface': True,
                                      'material':
                                          {'polylineGlow':
                                               {'color': {'rgba': [0, 255, 127, 55]},
                                                'glowPower': 0.25},
                                           },
+                                     'positions':
+                                         {'cartographicRadians': [1.6, 5.3, 10,
+                                                                  2.4, 4.2, 20,
+                                                                  3.8, 3.1, 30]},
                                      })
         po = czml.PolylineOutline(color={'rgba': [0, 255, 127, 55]},
                                   outlineColor={'rgba': [0, 55, 127, 255]},
                                   outlineWidth=4)
         m3 = czml.Material(polylineOutline=po)
-        p3 = czml.Polyline(show=True, width=2, followSurface=False, material=m3)
+        c3 = geometry.LineString([(1000, 7500, 90), (2000, 6500, 50), (3000, 5500, 20)])
+        o3 = czml.Positions(cartesian=c3)
+        p3 = czml.Polyline(show=True, width=2, followSurface=False, material=m3, positions=o3)
         self.assertEqual(p3.data(), {'show': True, 'width': 2, 'followSurface': False,
                                      'material':
                                          {'polylineOutline':
@@ -469,6 +477,10 @@ class CzmlClassesTestCase(unittest.TestCase):
                                                'outlineColor': {'rgba': [0, 55, 127, 255]},
                                                'outlineWidth': 4},
                                           },
+                                     'positions':
+                                         {'cartesian': [1000, 7500, 90,
+                                                        2000, 6500, 50,
+                                                        3000, 5500, 20]},
                                      })
 
     def testPolygon(self):
@@ -613,7 +625,7 @@ class CzmlClassesTestCase(unittest.TestCase):
         pl.width = 10
         pl.outlineWidth = 2
         pl.show = True
-        v = czml.VertexPositions()
+        v = czml.Positions()
         v.cartographicDegrees = [0.0, 0.0, .0, 1.0, 1.0, 1.0]
         p4.vertexPositions = v
         p4.polyline = pl

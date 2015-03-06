@@ -146,7 +146,7 @@ class _CZMLBaseObject(object):
             if a is not None:
                 # These classes have a data method that should be called.
                 if isinstance(a, (_CZMLBaseObject, _Colors,
-                                  _Coordinates, _VPositions)):
+                                  _Coordinates, _Positions)):
                     d[attr] = a.data()
                 else:
                     d[attr] = a
@@ -753,7 +753,7 @@ class Clock(_CZMLBaseObject):
         self.step = data.get('step', None)
 
 
-class _VPositions(object):
+class _Positions(object):
     """ The list of positions [X, Y, Z, X, Y, Z, ...] """
 
     coords = None
@@ -786,7 +786,7 @@ class _VPositions(object):
         return self.coords
 
 
-class VertexPositions(_CZMLBaseObject):
+class Positions(_CZMLBaseObject):
     """The world-space positions of vertices.
     The vertex positions have no direct visual representation, but they
     are used to define polygons, polylines, and other objects attached
@@ -834,7 +834,7 @@ class VertexPositions(_CZMLBaseObject):
     @cartesian.setter
     def cartesian(self, geom):
         if geom is not None:
-            self._cartesian = _VPositions(geom)
+            self._cartesian = _Positions(geom)
         else:
             self._cartesian = None
 
@@ -849,7 +849,7 @@ class VertexPositions(_CZMLBaseObject):
     @cartographicDegrees.setter
     def cartographicDegrees(self, geom):
         if geom is not None:
-            self._cartographicDegrees = _VPositions(geom)
+            self._cartographicDegrees = _Positions(geom)
         else:
             self._cartographicDegrees = None
 
@@ -865,7 +865,7 @@ class VertexPositions(_CZMLBaseObject):
     @cartographicRadians.setter
     def cartographicRadians(self, geom):
         if geom is not None:
-            self._cartographicRadians = _VPositions(geom)
+            self._cartographicRadians = _Positions(geom)
         else:
             self._cartographicRadians = None
 
@@ -1171,12 +1171,12 @@ class Path(_CZMLBaseObject):
 
 class Polygon(_CZMLBaseObject):
     """A polygon, which is a closed figure on the surface of the Earth.
-    The vertices of the polygon are specified by the vertexPositions property.
+    The vertices of the polygon are specified by the positions property.
     """
     show = None
-    vertexPositions = None
+    positions = None
     _material = None
-    _properties = ('material', 'vertexPositions', 'show')
+    _properties = ('material', 'positions', 'show')
 
     def __init__(self, color=None, **kwargs):
         if color:
@@ -1344,7 +1344,7 @@ class CZMLPacket(_CZMLBaseObject):
     # The world-space positions of vertices. The vertex positions have no
     # direct visual representation, but they are used to define polygons,
     # polylines, and other objects attached to the object.
-    _vertexPositions = None
+    _positions = None
 
     # The orientation of the object in the world. The orientation has no
     # direct visual representation, but it is used to orient models,
@@ -1356,7 +1356,7 @@ class CZMLPacket(_CZMLBaseObject):
     _label = None
 
     # A polyline, which is a line in the scene composed of multiple segments.
-    # The vertices of the polyline are specified by the vertexPositions
+    # The vertices of the polyline are specified by the positions
     # property.
     _polyline = None
 
@@ -1367,7 +1367,7 @@ class CZMLPacket(_CZMLBaseObject):
     path = class_property(Path, 'path')
 
     # A polygon, which is a closed figure on the surface of the Earth.
-    # The vertices of the polygon are specified by the vertexPositions
+    # The vertices of the polygon are specified by the positions
     # property.
     _polygon = None
 
@@ -1530,24 +1530,24 @@ class CZMLPacket(_CZMLBaseObject):
             raise TypeError
 
     @property
-    def vertexPositions(self):
+    def positions(self):
         """The world-space positions of vertices.
         The vertex positions have no direct visual representation,
         but they are used to define polygons, polylines,
         and other objects attached to the object."""
-        if self._vertexPositions is not None:
-            return self._vertexPositions.data()
+        if self._positions is not None:
+            return self._positions.data()
 
-    @vertexPositions.setter
-    def vertexPositions(self, vpositions):
-        if isinstance(vpositions, VertexPositions):
-            self._vertexPositions = vpositions
+    @positions.setter
+    def positions(self, vpositions):
+        if isinstance(vpositions, Positions):
+            self._positions = vpositions
         elif isinstance(vpositions, dict):
-            p = VertexPositions()
+            p = Positions()
             p.load(vpositions)
-            self._vertexPositions = p
+            self._positions = p
         elif vpositions is None:
-            self._vertexPositions = None
+            self._positions = None
         else:
             raise TypeError
 
@@ -1555,7 +1555,7 @@ class CZMLPacket(_CZMLBaseObject):
     @property
     def polyline(self):
         """A polyline, which is a line in the scene composed of multiple segments.
-        The vertices of the polyline are specified by the vertexPositions
+        The vertices of the polyline are specified by the positions
         property."""
         if self._polyline is not None:
             return self._polyline.data()
@@ -1576,7 +1576,7 @@ class CZMLPacket(_CZMLBaseObject):
     @property
     def polygon(self):
         """A polygon, which is a closed figure on the surface of the Earth.
-        The vertices of the polygon are specified by the vertexPositions
+        The vertices of the polygon are specified by the positions
         property."""
 
         if self._polygon is not None:
@@ -1598,7 +1598,7 @@ class CZMLPacket(_CZMLBaseObject):
     @property
     def cone(self):
         """A polygon, which is a closed figure on the surface of the Earth.
-        The vertices of the polygon are specified by the vertexPositions
+        The vertices of the polygon are specified by the positions
         property."""
 
         if self._cone is not None:
@@ -1636,8 +1636,8 @@ class CZMLPacket(_CZMLBaseObject):
             d['label'] = self.label
         if self.point  is not None:
             d['point'] = self.point
-        if self.vertexPositions  is not None:
-            d['vertexPositions'] = self.vertexPositions
+        if self.positions  is not None:
+            d['positions'] = self.positions
         if self.polyline  is not None:
             d['polyline'] = self.polyline
         if self.polygon  is not None:
@@ -1661,7 +1661,7 @@ class CZMLPacket(_CZMLBaseObject):
         self.position = data.get('position', None)
         self.label = data.get('label', None)
         self.point = data.get('point', None)
-        self.vertexPositions = data.get('vertexPositions', None)
+        self.positions = data.get('positions', None)
         self.polyline = data.get('polyline', None)
         self.polygon = data.get('polygon', None)
 
