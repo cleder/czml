@@ -1,12 +1,15 @@
-
-0.2 (unreleased)
+v 0.2 (unreleased)
 -----------------
 
 - Fixed bug in the Number class [Carl Fischer (Carl4)]
-- add Radii, Orientation, Path, Ellipsoid, Cone, Ellipse [Carl Fischer (Carl4)]
+- Add Radii, Orientation, Path, Ellipsoid, Cone, Ellipse [Carl Fischer (Carl4)]
+- Replace VertexPositions with Positions [Christopher Clark (Frencil)]
+- Rebuild two-dimensional object classes and tests for current CZML [Christopher Clark (Frencil)]
+- Add/update all documented material subclasses (Grid, Image, Stripe, SolidColor, PolylineGlow, PolylineOutline)
+- Add Clock [Christopher Clark (Frencil)]
 
 
 v 0.1 (2013/04/05)
 -------------------
 
-- initial release
+- Initial release [Christian Lederman (cleder)]
