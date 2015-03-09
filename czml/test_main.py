@@ -36,7 +36,7 @@ from pygeoif import geometry
 
 class BaseClassesTestCase(unittest.TestCase):
 
-    def test_DateTimeAware(self):
+    def testDateTimeAware(self):
 
         dtob = czml._DateTimeAware()
         now = datetime.now()
@@ -107,7 +107,7 @@ class BaseClassesTestCase(unittest.TestCase):
         dtob.loads(est_jst)
         self.assertEqual(dtob.data(), json.loads(est_jst))
 
-    def test_Coordinates(self):
+    def testCoordinates(self):
 
         coord = czml._Coordinates([0, 1])
         self.assertEqual(len(coord.coords), 1)
