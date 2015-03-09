@@ -7,6 +7,7 @@ v 0.2 (2015/03/09)
 - Rebuild two-dimensional object classes and tests for current CZML [Christopher Clark (Frencil)]
 - Add/update all documented material subclasses (Grid, Image, Stripe, SolidColor, PolylineGlow, PolylineOutline)
 - Add document object support (including version and Clock) [Christopher Clark (Frencil)]
+- Restrict support to Python 2.7 and 3.3+ [Christopher Clark (Frencil)]
 
 
 v 0.1 (2013/04/05)
