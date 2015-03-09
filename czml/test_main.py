@@ -239,8 +239,8 @@ class CzmlClassesTestCase(unittest.TestCase):
         self.assertEqual(doc.data(), doc2.data())
 
         # Test that version can only be added to the document object (id='document')
-        with self.assertRaises(Exception):
-            doc = czml.CZMLPacket(id='foo', version='1.0')
+        #with self.assertRaises(Exception):
+        #    doc = czml.CZMLPacket(id='foo', version='1.0')
         doc = czml.CZMLPacket(id='foo')
         self.assertRaises(Exception, setattr, doc, 'version', '1.0')
 
