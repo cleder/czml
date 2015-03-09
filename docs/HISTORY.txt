@@ -1,16 +1,20 @@
-v 0.2 (2015/03/09)
------------------
+v 0.3 (2015/03/09)
+------------------
 
-- Fixed bug in the Number class [Carl Fischer (Carl4)]
-- Add Radii, Orientation, Path, Ellipsoid, Cone, Ellipse [Carl Fischer (Carl4)]
 - Replace VertexPositions with Positions [Christopher Clark (Frencil)]
 - Rebuild two-dimensional object classes and tests for current CZML [Christopher Clark (Frencil)]
-- Add/update all documented material subclasses (Grid, Image, Stripe, SolidColor, PolylineGlow, PolylineOutline)
+- Add/update all documented material subclasses (Grid, Image, Stripe, SolidColor, PolylineGlow, PolylineOutline) [Christopher Clark (Frencil)]
 - Add document object support (including version and Clock) [Christopher Clark (Frencil)]
 - Restrict support to Python 2.7 and 3.3+ [Christopher Clark (Frencil)]
 
 
+v 0.2 (unreleased)
+------------------
+- Fixed bug in the Number class [Carl Fischer (Carl4)]
+- Add Radii, Orientation, Path, Ellipsoid, Cone, Ellipse [Carl Fischer (Carl4)]
+
+
 v 0.1 (2013/04/05)
--------------------
+------------------
 
 - Initial release [Christian Lederman (cleder)]
