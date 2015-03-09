@@ -1,4 +1,4 @@
-v 0.2 (unreleased)
+v 0.2 (2015/03/09)
 -----------------
 
 - Fixed bug in the Number class [Carl Fischer (Carl4)]
@@ -6,7 +6,7 @@ v 0.2 (unreleased)
 - Replace VertexPositions with Positions [Christopher Clark (Frencil)]
 - Rebuild two-dimensional object classes and tests for current CZML [Christopher Clark (Frencil)]
 - Add/update all documented material subclasses (Grid, Image, Stripe, SolidColor, PolylineGlow, PolylineOutline)
-- Add Clock [Christopher Clark (Frencil)]
+- Add document object support (including version and Clock) [Christopher Clark (Frencil)]
 
 
 v 0.1 (2013/04/05)

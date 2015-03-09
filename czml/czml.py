@@ -707,50 +707,18 @@ class Billboard(_CZMLBaseObject):
         self.scale = data.get('scale', None)
         self.color = data.get('color', None)
 
+
 class Clock(_CZMLBaseObject):
-    """The clock settings for the entire data set. Only valid on the
-    document object."""
+    """The clock settings for the entire data set.
+       Only valid on the document object."""
+    
+    interval = None
 
-    # The current time.
-    currentTime = None
-
-    # The multiplier, which in TICK_DEPENDENT mode is the number of seconds
-    # to advance each tick. In SYSTEM_CLOCK_DEPENDENT mode, it is the
-    # multiplier applied to the amount of time elapsed between ticks.
-    # This value is ignored in SYSTEM_CLOCK mode.
-    multiplier = None
-
-    # The behavior of a clock when its current time reaches its start or
-    # end points. Valid values are 'UNBOUNDED', 'CLAMPED', and 'LOOP_STOP'.
-    range = None
-
-    # Defines how a clock steps in time. Valid values are 'SYSTEM_CLOCK',
-    # 'SYSTEM_CLOCK_MULTIPLIER', and 'TICK_DEPENDENT'.
-    step = None
-
-    def __init__(self, currentTime=None, multiplier=None, range=None, step=None):
-        self.currentTime = currentTime
-        self.multiplier = multiplier
-        self.range = range
-        self.step = step
-
-    def data(self):
-        d = {}
-        if self.currentTime:
-            d['currentTime'] = self.currentTime
-        if self.multiplier:
-            d['multiplier'] = self.multiplier
-        if self.range:
-            d['range'] = self.range
-        if self.step:
-            d['step'] = self.step
-        return d
-
-    def load(self, data):
-        self.currentTime = data.get('currentTime', None)
-        self.multiplier = data.get('multiplier', None)
-        self.range = data.get('range', None)
-        self.step = data.get('step', None)
+    _currentTime = None
+    _multiplier = None
+    _range = None
+    _step = None
+    _properties = ('currentTime', 'multiplier', 'interval', 'range', 'step',)
 
 
 class _Positions(object):
@@ -1352,7 +1320,7 @@ class CZMLPacket(_CZMLBaseObject):
     # to this object in order to, for example, add more data to it.
     # A single CZML stream or document can contain multiple packets with
     # the same id, describing different aspects of the same object.
-    id = None
+    _id = None
 
     # The availability property indicates when data for an object is available.
     # If data for an object is known to be available at the current animation
@@ -1361,13 +1329,17 @@ class CZMLPacket(_CZMLBaseObject):
     # like "Buffering..." while it waits to receive the data. The property
     # can be a single string specifying a single interval, or an array
     # of strings representing intervals.
-    availability = None
+    _availability = None
+
+    # The CZML version being written. Only valid on the document object.
+    _version = None
+
+    # The clock settings for the entire data set. Only valid on the document object.
+    _clock = None
 
     _position = None
 
     _billboard = None
-
-    _clock = None
 
     # The world-space positions of vertices. The vertex positions have no
     # direct visual representation, but they are used to define polygons,
@@ -1426,9 +1398,14 @@ class CZMLPacket(_CZMLBaseObject):
     ellipse = class_property(Ellipse, 'ellipse')
 
     # TODO: replace this.
-    def __init__(self, id=None, availability=None):
+    def __init__(self, id=None, availability=None, version=None):
         self.id = id
         self.availability = availability
+        if version is not None:
+            if self.id == 'document':
+                self._version = version
+            else:
+                raise Exception("version can only be set on the document object")
 
     # TODO: Figure out how to set __doc__ from here.
     # position = class_property(Position, 'position')
@@ -1499,6 +1476,23 @@ class CZMLPacket(_CZMLBaseObject):
             raise TypeError
 
     @property
+    def version(self):
+        """The CZML version being written. Only valid on the document object."""
+        if self._version is not None:
+            return self._version
+
+    @version.setter
+    def version(self, version):
+        if self.id != 'document':
+            raise Exception('version can only be set on the document object')
+        if isinstance(version, str):
+            self._version = version
+        elif isinstance(version, basestring):
+            self._version = version
+        else:
+            raise TypeError
+
+    @property
     def clock(self):
         """The clock settings for the entire data set. Only valid on the
         document object."""
@@ -1507,6 +1501,8 @@ class CZMLPacket(_CZMLBaseObject):
 
     @clock.setter
     def clock(self, clock):
+        if self.id != 'document':
+            raise Exception('Clock object is only valid on the document object')
         if isinstance(clock, Clock):
             self._clock = clock
         elif isinstance(clock, dict):
@@ -1650,6 +1646,11 @@ class CZMLPacket(_CZMLBaseObject):
         d = {}
         if self.id:
             d['id'] = self.id
+        if self.version is not None:
+            if self.id == 'document':
+                d['version'] = self.version
+            else:
+                raise Exception("version can only be set on the document object")
         if self.availability is not None:
             d['availability'] = self.availability
         if self.billboard is not None:
@@ -1683,6 +1684,7 @@ class CZMLPacket(_CZMLBaseObject):
 
     def load(self, data):
         self.id = data.get('id', None)
+        self.version = data.get('version', None)
         # self.availability = data.get('availability', None)
         self.billboard = data.get('billboard', None)
         self.clock = data.get('clock', None)

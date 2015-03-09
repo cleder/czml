@@ -226,6 +226,24 @@ class BaseClassesTestCase(unittest.TestCase):
 
 class CzmlClassesTestCase(unittest.TestCase):
 
+    def testDocument(self):
+
+        doc = czml.CZMLPacket(id='document', version='1.0')
+        self.assertEqual(doc.data(), {'id': 'document', 'version': '1.0'})
+
+        doc.version = '1.1'
+        self.assertEqual(doc.data(), {'id': 'document', 'version': '1.1'})
+
+        doc2 = czml.CZMLPacket()
+        doc2.loads(doc.dumps())
+        self.assertEqual(doc.data(), doc2.data())
+
+        # Test that version can only be added to the document object (id='document')
+        with self.assertRaises(Exception):
+            doc = czml.CZMLPacket(id='foo', version='1.0')
+        doc = czml.CZMLPacket(id='foo')
+        self.assertRaises(Exception, setattr, doc, 'version', '1.0')
+
     def testPosition(self):
 
         pos = czml.Position()
@@ -333,6 +351,7 @@ class CzmlClassesTestCase(unittest.TestCase):
 
     def testClock(self):
 
+        doc = czml.CZMLPacket(id='document', version='1.0')
         c = czml.Clock()
         c.currentTime = '2017-08-21T16:50:00Z'
         c.multiplier = 3
@@ -343,10 +362,22 @@ class CzmlClassesTestCase(unittest.TestCase):
              'multiplier': 3,
              'range': 'UNBOUNDED',
              'step': 'SYSTEM_CLOCK_MULTIPLIER'})
+        doc.clock = c
+        self.assertEqual(doc.data(),
+                         {'id': 'document',
+                          'version': '1.0',
+                          'clock': {'currentTime': '2017-08-21T16:50:00Z',
+                                    'multiplier': 3,
+                                    'range': 'UNBOUNDED',
+                                    'step': 'SYSTEM_CLOCK_MULTIPLIER'},
+                          })
 
-        c2 = czml.Clock()
-        c2.loads(c.dumps())
-        self.assertEqual(c.data(), c2.data())
+        # Test that clock can only be added to the document object (id='document')
+        doc = czml.CZMLPacket(id='foo')
+        c = czml.Clock()
+        self.assertRaises(Exception, setattr, doc, 'clock', c)
+        
+        
 
     def testMaterial(self):
 
@@ -762,84 +793,6 @@ class CzmlClassesTestCase(unittest.TestCase):
         #with self.assertRaises(ValueError):
         #    czml.Cone(bad_data=None, **czml_dict)
         self.assertRaises(ValueError, czml.Cone, bad_data=None, **czml_dict)
-
-    def testCZMLPacket(self):
-        p = czml.CZMLPacket(id='abc')
-        self.assertEqual(p.dumps(), '{"id": "abc"}')
-        bb = czml.Billboard()
-        bb.image = 'http://localhost/img.png'
-        bb.scale = 0.7
-        bb.show = True
-        p.billboard = bb
-        self.assertEqual(p.data(),
-            {'billboard': {'image': 'http://localhost/img.png',
-            'scale': 0.7, 'show': True}, 'id': 'abc'})
-        c = czml.Clock()
-        c.currentTime = '2017-08-21T16:50:00Z'
-        c.multiplier = 3
-        c.range = 'UNBOUNDED'
-        c.step = 'SYSTEM_CLOCK_MULTIPLIER'
-        p.clock = c
-        self.assertEqual(p.data(),
-                         {'billboard': {'image': 'http://localhost/img.png',
-                                        'scale': 0.7, 'show': True },
-                          'id': 'abc',
-                          'clock': {'currentTime': '2017-08-21T16:50:00Z',
-                                    'multiplier': 3, 'range': 'UNBOUNDED',
-                                    'step': 'SYSTEM_CLOCK_MULTIPLIER'},
-                          })
-        p2 = czml.CZMLPacket(id='abc')
-        p2.loads(p.dumps())
-        self.assertEqual(p.data(), p2.data())
-        pos = czml.Position()
-        coords = [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]
-        pos.cartesian = coords
-        p.position = pos
-        l = czml.Label()
-        l.text = 'test label'
-        l.show = False
-        p.label = l
-        self.assertEqual(p.data(),
-                         {'billboard': {'image': 'http://localhost/img.png',
-                                        'scale': 0.7, 'show': True },
-                          'id': 'abc',
-                          'clock': {'currentTime': '2017-08-21T16:50:00Z',
-                                    'multiplier': 3, 'range': 'UNBOUNDED',
-                                    'step': 'SYSTEM_CLOCK_MULTIPLIER'},
-                          'label': {'show': False, 'text': 'test label'},
-                          'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]},
-                          })
-        p2.loads(p.dumps())
-        self.assertEqual(p.data(), p2.data())
-        p3 = czml.CZMLPacket(id='cde')
-        p3.point = {'color':
-                    {'rgba': [0, 255, 127, 55]},
-                    'show': True}
-        self.assertEqual(p3.data(), {'id': 'cde',
-                                    'point': {'color':
-                                        {'rgba': [0, 255, 127, 55]},
-                                        'show': True}})
-        return p
-
-    def testCZML(self):
-        cz = czml.CZML()
-        self.assertEqual(list(cz.data()), [])
-        p = self.testCZMLPacket()
-        cz.packets.append(p)
-        self.assertEqual(list(cz.data()),
-                         [{'billboard': {'image': 'http://localhost/img.png',
-                                         'scale': 0.7, 'show': True},
-                           'id': 'abc',
-                           'clock': {'currentTime': '2017-08-21T16:50:00Z',
-                                     'multiplier': 3, 'range': 'UNBOUNDED',
-                                     'step': 'SYSTEM_CLOCK_MULTIPLIER'},
-                           'label': {'show': False, 'text': 'test label'},
-                           'position': {'cartesian': [7.0, 0.0, 1.0, 2.0, 6.0, 3.0, 4.0, 5.0]}
-                           }])
-        cz1 = czml.CZML()
-        cz1.loads(cz.dumps())
-        self.assertEqual(list(cz.data()), list(cz1.data()))
-
 
 def test_suite():
     suite = unittest.TestSuite()
