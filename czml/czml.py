@@ -1661,15 +1661,15 @@ class CZMLPacket(_CZMLBaseObject):
             d['position'] = self.position
         if self.orientation is not None:
             d['orientation'] = self.orientation
-        if self.label  is not None:
+        if self.label is not None:
             d['label'] = self.label
-        if self.point  is not None:
+        if self.point is not None:
             d['point'] = self.point
-        if self.positions  is not None:
+        if self.positions is not None:
             d['positions'] = self.positions
         if self.polyline  is not None:
             d['polyline'] = self.polyline
-        if self.polygon  is not None:
+        if self.polygon is not None:
             d['polygon'] = self.polygon
         if self.cone is not None:
             d['cone'] = self.cone

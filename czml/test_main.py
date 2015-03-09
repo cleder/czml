@@ -228,17 +228,20 @@ class CzmlClassesTestCase(unittest.TestCase):
 
     def testDocument(self):
 
+        # Create a new document packet
         doc = czml.CZMLPacket(id='document', version='1.0')
         self.assertEqual(doc.data(), {'id': 'document', 'version': '1.0'})
 
+        # Modify an existing document packet
         doc.version = '1.1'
         self.assertEqual(doc.data(), {'id': 'document', 'version': '1.1'})
 
+        # Create a new document packet from an existing document packet
         doc2 = czml.CZMLPacket()
         doc2.loads(doc.dumps())
         self.assertEqual(doc.data(), doc2.data())
 
-        # Test that version can only be added to the document object (id='document')
+        # Test that version can only be added to the document packet (id='document')
         with self.assertRaises(Exception):
             doc = czml.CZMLPacket(id='foo', version='1.0')
         doc = czml.CZMLPacket(id='foo')
@@ -292,6 +295,7 @@ class CzmlClassesTestCase(unittest.TestCase):
 
     def testPoint(self):
 
+        # Create a new point
         point = czml.Point()
         point.color = {'rgba': [0, 255, 127, 55]}
         self.assertEqual(point.data(), {'color':
@@ -299,58 +303,101 @@ class CzmlClassesTestCase(unittest.TestCase):
                 'show': False})
 
         point.outlineColor = {'rgbaf': [0.0, 0.255, 0.127, 0.55]}
-        self.assertEqual(point.data(), {'color':
-                    {'rgba': [0, 255, 127, 55]},
-                    'outlineColor': {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
-                    'show': False})
+        self.assertEqual(point.data(), {'color': {'rgba': [0, 255, 127, 55]},
+                                        'outlineColor': {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
+                                        'show': False})
 
+        # Modify an existing point
         point.pixelSize = 10
         point.outlineWidth = 2
         point.show = True
-        self.assertEqual(point.data(), {'color':
-                        {'rgba': [0, 255, 127, 55]},
-                    'pixelSize': 10,
-                    'outlineColor':
-                        {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
-                    'outlineWidth': 2,
-                    'show': True})
+        self.assertEqual(point.data(), {'color': {'rgba': [0, 255, 127, 55]},
+                                        'pixelSize': 10,
+                                        'outlineColor': {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
+                                        'outlineWidth': 2,
+                                        'show': True})
 
+        # Create a new point from an existing point
         p2 = czml.Point()
         p2.loads(point.dumps())
         self.assertEqual(point.data(), p2.data())
 
+        # Add a point to a CZML packet
+        packet = czml.CZMLPacket(id='abc')
+        packet.point = p2
+        self.assertEqual(packet.data(), {'id': 'abc',
+                                         'point': {'color': {'rgba': [0, 255, 127, 55]},
+                                                   'pixelSize': 10,
+                                                   'outlineColor': {'rgbaf': [0.0, 0.255, 0.127, 0.55]},
+                                                   'outlineWidth': 2,
+                                                   'show': True},
+                                         })
+
     def testLabel(self):
 
+        # Create a new label
         l = czml.Label()
         l.text = 'test label'
         l.show = False
         self.assertEqual(l.data(), {'text': 'test label', 'show': False})
 
+        # Modify an existing label
         l.show = True
         self.assertEqual(l.data(), {'text': 'test label', 'show': True})
 
+        # Create a new label from an existing label
         l2 = czml.Label()
         l2.loads(l.dumps())
         self.assertEqual(l.data(), l2.data())
 
+        # Add a label toa CZML packet
+        packet = czml.CZMLPacket(id='abc')
+        packet.label = l2
+        self.assertEqual(packet.data(), {'id': 'abc',
+                                         'label': {'text': 'test label', 'show': True},
+                                         })
+
     def testBillboard(self):
 
+        # Create a new billboard
         bb = czml.Billboard()
         bb.image = 'http://localhost/img.png'
         bb.scale = 0.7
         bb.show = True
         bb.color = {'rgba': [0, 255, 127, 55]}
-        self.assertEqual(bb.data(),
-            {'image': 'http://localhost/img.png', 'scale': 0.7,
-            'color': {'rgba': [0, 255, 127, 55]},
-            'show': True})
+        self.assertEqual(bb.data(), {'image': 'http://localhost/img.png',
+                                     'scale': 0.7,
+                                     'color': {'rgba': [0, 255, 127, 55]},
+                                     'show': True})
 
+        # Modify an existing billboard
+        bb.image = 'http://localhost/img2.png'
+        bb.scale = 1.3
+        bb.color = {'rgba': [127, 0, 255, 160]}
+        bb.show = False
+        self.assertEqual(bb.data(), {'image': 'http://localhost/img2.png',
+                                     'scale': 1.3,
+                                     'color': {'rgba': [127, 0, 255, 160]},
+                                     'show': False})
+
+        # Create a new billboard from an existing billboard
         bb2 = czml.Billboard()
         bb2.loads(bb.dumps())
         self.assertEqual(bb.data(), bb2.data())
 
+        # Add a billboard to a CZML packet
+        packet = czml.CZMLPacket(id='abc')
+        packet.billboard = bb2
+        self.assertEqual(packet.data(), {'id': 'abc',
+                                         'billboard': {'image': 'http://localhost/img2.png',
+                                                       'scale': 1.3,
+                                                       'color': {'rgba': [127, 0, 255, 160]},
+                                                       'show': False},
+                                         })
+
     def testClock(self):
 
+        # Create a new clock (inside a document packet)
         doc = czml.CZMLPacket(id='document', version='1.0')
         c = czml.Clock()
         c.currentTime = '2017-08-21T16:50:00Z'
@@ -381,17 +428,20 @@ class CzmlClassesTestCase(unittest.TestCase):
 
     def testMaterial(self):
 
+        # Create a new material
         red = czml.Color(rgba=(255, 0, 0, 64))
         mat = czml.Material()
         mat.solidColor = {'color': red}
-        mat_dict = {'solidColor': {'color': {'rgba': [255, 0, 0, 64]}}}
-        self.assertEqual(mat.data(), mat_dict)
+        self.assertEqual(mat.data(), {'solidColor': {'color': {'rgba': [255, 0, 0, 64]}}})
 
-        mat2 = czml.Material(**mat_dict)
+        # Create a new material from an existing material
+        mat2 = czml.Material()
+        mat2.loads(mat.dumps())
         self.assertEqual(mat.data(), mat2.data())
 
     def testGrid(self):
 
+        # Create a new grid
         red = czml.Color(rgba=(255, 0, 0, 64))
         g = czml.Grid()
         g.color = red
@@ -399,25 +449,33 @@ class CzmlClassesTestCase(unittest.TestCase):
         g.lineCount = 4
         g.lineThickness = 1.5
         g.lineOffset = 0.75
-        g_dict = {'color': {'rgba': [255, 0, 0, 64]}, 'cellAlpha': 0.5, 'lineCount': 4,
-                  'lineThickness': 1.5, 'lineOffset': 0.75}
-        self.assertEqual(g.data(), g_dict)
+        self.assertEqual(g.data(), {'color': {'rgba': [255, 0, 0, 64]},
+                                    'cellAlpha': 0.5,
+                                    'lineCount': 4,
+                                    'lineThickness': 1.5,
+                                    'lineOffset': 0.75})
 
-        g2 = czml.Grid(**g_dict)
+        # Create a new grid from an existing grid
+        g2 = czml.Grid()
+        g2.loads(g.dumps())
         self.assertEqual(g.data(), g2.data())
 
     def testImage(self):
 
+        # Create a new image
         i = czml.Image(image='http://localhost/img.png')
         i.repeat = 3
-        i_dict = {'image': 'http://localhost/img.png', 'repeat': 3}
-        self.assertEqual(i.data(), i_dict)
+        self.assertEqual(i.data(), {'image': 'http://localhost/img.png',
+                                    'repeat': 3})
 
-        i2 = czml.Image(**i_dict)
+        # Create a new image from an existing image
+        i2 = czml.Image()
+        i2.loads(i.dumps())
         self.assertEqual(i.data(), i2.data())
 
     def testStripe(self):
 
+        # Create a new stripe
         red = czml.Color(rgba=(255, 0, 0, 64))
         grn = czml.Color(rgba=(0, 255, 0, 64))
         s = czml.Stripe()
@@ -426,52 +484,66 @@ class CzmlClassesTestCase(unittest.TestCase):
         s.oddColor = grn
         s.offset = 1.5
         s.repeat = 3.6
-        s_dict = {'orientation': 'HORIZONTAL', 'evenColor': {'rgba': [255, 0, 0, 64]},
-                  'oddColor': {'rgba': [0, 255, 0, 64]}, 'offset': 1.5, 'repeat': 3.6}
-        self.assertEqual(s.data(), s_dict)
+        self.assertEqual(s.data(), {'orientation': 'HORIZONTAL',
+                                    'evenColor': {'rgba': [255, 0, 0, 64]},
+                                    'oddColor': {'rgba': [0, 255, 0, 64]},
+                                    'offset': 1.5,
+                                    'repeat': 3.6})
 
-        s2 = czml.Stripe(**s_dict)
+        # Create a new stripe from an existing stripe
+        s2 = czml.Stripe()
+        s2.loads(s.dumps())
         self.assertEqual(s.data(), s2.data())
 
     def testSolidColor(self):
 
+        # Create a new solidcolor
         red = czml.Color(rgba=(255, 0, 0, 64))
         sc = czml.SolidColor()
         sc.color = red
-        sc_dict = {'color': {'rgba': [255, 0, 0, 64]}}
-        self.assertEqual(sc.data(), sc_dict)
+        self.assertEqual(sc.data(), {'color': {'rgba': [255, 0, 0, 64]}})
 
-        sc2 = czml.SolidColor(**sc_dict)
+        # Create a new solidcolor from an existing solidcolor
+        sc2 = czml.SolidColor()
+        sc2.loads(sc.dumps())
         self.assertEqual(sc.data(), sc2.data())
 
     def testPolylineGlow(self):
 
+        # Create a new polylineglow
         red = czml.Color(rgba=(255, 0, 0, 64))
         pg = czml.PolylineGlow()
         pg.color = red
         pg.glowPower = 0.25
-        pg_dict = {'color': {'rgba': [255, 0, 0, 64]}, 'glowPower': 0.25}
-        self.assertEqual(pg.data(), pg_dict)
+        self.assertEqual(pg.data(), {'color': {'rgba': [255, 0, 0, 64]},
+                                     'glowPower': 0.25})
 
-        pg2 = czml.PolylineGlow(**pg_dict)
+        # Create a new polylineglow from an existing polylineglow
+        pg2 = czml.PolylineGlow()
+        pg2.loads(pg.dumps())
         self.assertEqual(pg.data(), pg2.data())
 
     def testPolylineOutline(self):
 
+        # Create a new polylineoutline
         red = czml.Color(rgba=(255, 0, 0, 64))
         grn = czml.Color(rgba=(0, 255, 0, 64))
         po = czml.PolylineOutline()
         po.color = red
         po.outlineColor = grn
         po.outlineWidth = 4
-        po_dict = {'color': {'rgba': [255, 0, 0, 64]}, 'outlineColor': {'rgba': [0, 255, 0, 64]}, 'outlineWidth': 4}
-        self.assertEqual(po.data(), po_dict)
+        self.assertEqual(po.data(), {'color': {'rgba': [255, 0, 0, 64]},
+                                     'outlineColor': {'rgba': [0, 255, 0, 64]},
+                                     'outlineWidth': 4})
 
-        po2 = czml.PolylineOutline(**po_dict)
+        # Create a new polylineoutline from an existing polylineoutline
+        po2 = czml.PolylineOutline()
+        po2.loads(po.dumps())
         self.assertEqual(po.data(), po2.data())
 
     def testPositions(self):
 
+        # Create a new positions
         v = czml.Positions()
         l = geometry.LineString([(0, 0), (1, 1)])
         r = geometry.LinearRing([(0, 0), (1, 1), (1, 0), (0, 0)])
@@ -489,18 +561,21 @@ class CzmlClassesTestCase(unittest.TestCase):
             'cartographicDegrees':
             [0.0, 0.0, 0, 1.0, 1.0, 0, 1.0, 0.0, 0, 0.0, 0.0, 0]})
 
-        v2 = czml.Positions()
-        v2.loads(v.dumps())
-        self.assertEqual(v.data(), v2.data())
-
+        # Modify an existing positions
         v.cartesian = None
         v.cartographicDegrees = None
         v.cartographicRadians = [0.0, 0.0, .0, 1.0, 1.0, 1.0]
         self.assertEqual(v.data(), {'cartographicRadians':
             [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]})
 
+        # Create a new positions from an existing positions
+        v2 = czml.Positions()
+        v2.loads(v.dumps())
+        self.assertEqual(v.data(), v2.data())
+
     def testPath(self):
 
+        # Create a new path
         sc = czml.SolidColor(color={'rgba': [0, 255, 127, 55]})
         m1 = czml.Material(solidColor=sc)
         c1 = [0, -62, 141, 0,
@@ -522,10 +597,12 @@ class CzmlClassesTestCase(unittest.TestCase):
                                                                   
                                      })
 
+        # Create a new path from an existing path
         p2 = czml.Path()
         p2.loads(p1.dumps())
         self.assertEqual(p2.data(), p1.data())
 
+        # Modify an existing path
         po = czml.PolylineOutline(color={'rgba': [0, 255, 127, 55]},
                                   outlineColor={'rgba': [0, 55, 127, 255]},
                                   outlineWidth=4)
@@ -550,10 +627,30 @@ class CzmlClassesTestCase(unittest.TestCase):
                                                         4, 2000, 6500, 50,
                                                         8, 3000, 5500, 20]},
                                      })
+
+        # Add a path to a CZML packet
+        packet = czml.CZMLPacket(id='abc')
+        packet.path = p2
+        self.assertEqual(packet.data(), {'id': 'abc',
+                                         'path': {'show': False, 'width': 5, 'leadTime': 2,
+                                                  'trailTime': 6, 'resolution': 3,
+                                                  'material':
+                                                      {'polylineOutline':
+                                                           {'color': {'rgba': [0, 255, 127, 55]},
+                                                            'outlineColor': {'rgba': [0, 55, 127, 255]},
+                                                            'outlineWidth': 4},
+                                                       },
+                                                  'position':
+                                                      {'cartesian': [0, 1000, 7500, 90,
+                                                                     4, 2000, 6500, 50,
+                                                                     8, 3000, 5500, 20]},
+                                                  },
+                                         })
         
 
     def testPolyline(self):
 
+        # Create a new polyline
         sc = czml.SolidColor(color={'rgba': [0, 255, 127, 55]})
         m1 = czml.Material(solidColor=sc)
         c1 = geometry.LineString([(-162, 41, 0), (-151, 43, 0), (-140, 45, 0)])
@@ -571,6 +668,7 @@ class CzmlClassesTestCase(unittest.TestCase):
                                                                   
                                      })
 
+        # Create a new polyline
         pg = czml.PolylineGlow(color={'rgba': [0, 255, 127, 55]}, glowPower=0.25)
         m2 = czml.Material(polylineGlow=pg)
         c2 = geometry.LineString([(1.6, 5.3, 10), (2.4, 4.2, 20), (3.8, 3.1, 30)])
@@ -588,10 +686,12 @@ class CzmlClassesTestCase(unittest.TestCase):
                                                                   3.8, 3.1, 30]},
                                      })
 
+        # Create a polyline from an existing polyline
         p3 = czml.Polyline()
         p3.loads(p2.dumps())
         self.assertEqual(p3.data(), p2.data())
 
+        # Modify an existing polyline
         po = czml.PolylineOutline(color={'rgba': [0, 255, 127, 55]},
                                   outlineColor={'rgba': [0, 55, 127, 255]},
                                   outlineWidth=4)
@@ -613,10 +713,28 @@ class CzmlClassesTestCase(unittest.TestCase):
                                                         3000, 5500, 20]},
                                      })
 
+        # Add a polyline to a CZML packet
+        packet = czml.CZMLPacket(id='abc')
+        packet.polyline = p3
+        self.assertEqual(packet.data(), {'id': 'abc',
+                                         'polyline': {'show': False, 'width': 7, 'followSurface': True,
+                                                      'material':
+                                                          {'polylineOutline':
+                                                               {'color': {'rgba': [0, 255, 127, 55]},
+                                                                'outlineColor': {'rgba': [0, 55, 127, 255]},
+                                                                'outlineWidth': 4},
+                                                           },
+                                                      'positions':
+                                                          {'cartesian': [1000, 7500, 90,
+                                                                         2000, 6500, 50,
+                                                                         3000, 5500, 20]},
+                                                      },
+                                         })
 
 
     def testPolygon(self):
 
+        # Create a new polygon
         img = czml.Image(image='http://localhost/img.png', repeat=2)
         mat = czml.Material(image=img)
         pts = geometry.LineString([(50, 20, 2), (60, 30, 3), (50, 30, 4), (60, 20, 5)])
@@ -639,10 +757,12 @@ class CzmlClassesTestCase(unittest.TestCase):
                                                                    60, 20, 5]},
                                       })
 
+        # Create a new polygon from an existing polygon
         pol2 = czml.Polygon()
         pol2.loads(pol.dumps())
         self.assertEqual(pol2.data(), pol.data())
 
+        # Modify an existing polygon
         grid = czml.Grid(color={'rgba': [0, 55, 127, 255]}, cellAlpha=0.4,
                          lineCount=5, lineThickness=2, lineOffset=0.3)
         mat2 = czml.Material(grid=grid)
@@ -672,9 +792,34 @@ class CzmlClassesTestCase(unittest.TestCase):
                                                                     1.6, 1.2, 0]},
                                        })
 
+        # Add a polygon to a CZML packet
+        packet = czml.CZMLPacket(id='abc')
+        packet.polygon = pol2
+        self.assertEqual(packet.data(), {'id': 'abc',
+                                         'polygon': {'show': True, 'fill': True, 'outline': True,
+                                                     'perPositionHeight': False,
+                                                     'height': 7, 'extrudedHeight': 30,
+                                                     'outlineColor': {'rgba': [0, 255, 127, 55]},
+                                                     'material':
+                                                         {'grid':
+                                                              {'color': {'rgba': [0, 55, 127, 255]},
+                                                               'cellAlpha': 0.4,
+                                                               'lineCount': 5,
+                                                               'lineThickness': 2,
+                                                               'lineOffset': 0.3},
+                                                          },
+                                                     'positions':
+                                                         {'cartographicRadians': [1.5, 1.2, 0,
+                                                                                  1.6, 1.3, 0,
+                                                                                  1.5, 1.3, 0,
+                                                                                  1.6, 1.2, 0]},
+                                                     },
+                                         })
+
 
     def testEllipse(self):
 
+        # Create a new ellipse
         sc = czml.SolidColor(color={'rgba': [127, 127, 127, 255]})
         mat1 = czml.Material(solidColor=sc)
         pts1 = [50, 20, 2]
@@ -697,10 +842,12 @@ class CzmlClassesTestCase(unittest.TestCase):
                                            {'cartographicDegrees': [50, 20, 2]},
                                        })
 
+        # Create a new ellipse from an existing ellipse
         ell2 = czml.Ellipse()
         ell2.loads(ell1.dumps())
         self.assertEqual(ell2.data(), ell1.data())
 
+        # Modify an existing ellipse
         strp = czml.Stripe(evenColor={'rgba': [127, 55, 255, 255]},
                            oddColor={'rgba': [127, 255, 55, 127]},
                            offset=1.3, repeat=64, orientation='VERTICAL')
@@ -737,8 +884,35 @@ class CzmlClassesTestCase(unittest.TestCase):
                                                                     6, 1.6, 1.2, 0]},
                                        })
 
+        # Add an ellipse to a CZML packet
+        packet = czml.CZMLPacket(id='abc')
+        packet.ellipse = ell2
+        self.assertEqual(packet.data(), {'id': 'abc',
+                                         'ellipse': {'show': True, 'fill': True, 'outline': True,
+                                                     'height': 7, 'extrudedHeight': 30, 'rotation': 1.2,
+                                                     'semiMajorAxis': 600, 'semiMinorAxis': 400,
+                                                     'numberOfVerticalLines': 800,
+                                                     'outlineColor': {'rgba': [0, 255, 127, 55]},
+                                                     'material':
+                                                         {'stripe':
+                                                              {'evenColor': {'rgba': [127, 55, 255, 255]},
+                                                               'oddColor': {'rgba': [127, 255, 55, 127]},
+                                                               'offset': 1.3,
+                                                               'repeat': 64,
+                                                               'orientation': 'VERTICAL'},
+                                                          },
+                                                     'position':
+                                                         {'cartographicRadians': [0, 1.5, 1.2, 0,
+                                                                                  2, 1.6, 1.3, 0,
+                                                                                  4, 1.5, 1.3, 0,
+                                                                                  6, 1.6, 1.2, 0]},
+                                                     },
+                                         })
+
 
     def testEllipsoid(self):
+        
+        # Create a new ellipsoid
         ellipsoid_value = {'radii': {'cartesian': [1000.0, 2000.0, 3000.0]},
                            'material': {},
                            'show': True,
@@ -748,27 +922,40 @@ class CzmlClassesTestCase(unittest.TestCase):
         e.radii = czml.Radii(cartesian=[1000, 2000, 3000])
         e.material = czml.Material()
         self.assertEqual(e.data(), ellipsoid_value)
+
+        # Create a new ellipsoid from an existing ellipsoid
         e2 = czml.Ellipsoid(**ellipsoid_value)
         self.assertEqual(e.data(), ellipsoid_value)
 
-        # You can't create an ellipsoid with a nonsensical value for material.
+        # Verify you can't create an ellipsoid with a nonsensical value for material.
         ellipsoid_value['material'] = 2
         with self.assertRaises(TypeError):
             czml.Ellipsoid(**ellipsoid_value)
         self.assertRaises(TypeError, czml.Ellipsoid, **ellipsoid_value)
 
+        # Verify you can't create ellipsoids with nonsensical radii
         ellipsoid_value['material'] = {}
         ellipsoid_value['radii'] = 5
-        # Can't create ellipsoids with nonsensical radii
         with self.assertRaises(TypeError):
             czml.Ellipsoid(**ellipsoid_value)
         self.assertRaises(TypeError, czml.Ellipsoid, **ellipsoid_value)
 
+        # Add an ellipsoid to a CZML packet
+        packet = czml.CZMLPacket(id='abc')
+        packet.ellipsoid = e
+        self.assertEqual(packet.data(), {'id': 'abc',
+                                         'ellipsoid': {'radii': {'cartesian': [1000.0, 2000.0, 3000.0]},
+                                                       'material': {},
+                                                       'show': True,
+                                                       },
+                                         })
+
 
     def testCone(self):
+
+        # Create a new cone
         sc = czml.SolidColor(color={'rgba': [0, 255, 127, 55]})
         mat = czml.Material(solidColor=sc)
-
         c = czml.Cone(show=True,
                       innerMaterial=mat,
                       outerMaterial=mat,
@@ -777,22 +964,37 @@ class CzmlClassesTestCase(unittest.TestCase):
                       outerHalfAngle=1,
                       innerHalfAngle=2.0,
                       )
+        self.assertEqual(c.data(), {'outerHalfAngle': 1,
+                                    'innerHalfAngle': 2.0,
+                                    'outerMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}},
+                                    'show': True,
+                                    'showIntersection': True,
+                                    'capMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}},
+                                    'innerMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}}
+                                    })
 
-        czml_dict = {'outerHalfAngle': 1,
-                     'innerHalfAngle': 2.0,
-                     'outerMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}},
-                     'show': True,
-                     'showIntersection': True,
-                     'capMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}},
-                     'innerMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}}
-                     }
+        # Create a new cone from an existing cone
+        c2 = czml.Cone()
+        c2.loads(c.dumps())
+        self.assertEqual(c2.data(), c.data())
 
-        self.assertEqual(czml_dict, c.data())
-
-        # Passing in an unknown value raises a ValueError
+        # Verify passing in an unknown value raises a ValueError
         with self.assertRaises(ValueError):
-            czml.Cone(bad_data=None, **czml_dict)
-        self.assertRaises(ValueError, czml.Cone, bad_data=None, **czml_dict)
+            c3 = czml.Cone(bad_data=None)
+
+        # Add a cone to a CZML packet
+        packet = czml.CZMLPacket(id='abc')
+        packet.cone = c2
+        self.assertEqual(packet.data(), {'id': 'abc',
+                                         'cone': {'outerHalfAngle': 1,
+                                                  'innerHalfAngle': 2.0,
+                                                  'outerMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}},
+                                                  'show': True,
+                                                  'showIntersection': True,
+                                                  'capMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}},
+                                                  'innerMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}}
+                                                  },
+                                         })
 
 def test_suite():
     suite = unittest.TestSuite()
