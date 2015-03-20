@@ -1,3 +1,10 @@
+v 0.3.1 (2015/03/19)
+--------------------
+
+- Added usage example to README
+- Added docs/COMPONENTS.md
+- Minor cleanup from 0.3 release
+
 v 0.3 (2015/03/09)
 ------------------
 

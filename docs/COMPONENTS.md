@@ -1,0 +1,174 @@
+# Components
+
+This document details all supported CZML components. Each component maps to a document component in the [CZML Content Documentation](https://github.com/AnalyticalGraphicsInc/cesium/wiki/CZML-Content) and has passing test coverage.
+
+If a component is not listed here it may exist in an incomplete or experimental state.
+
+### document
+* version
+* clock
+    * currentTime
+    * interval
+    * multiplier
+    * range
+    * step
+
+### billboard
+* color
+* image
+* show
+* scale
+
+### point
+* color
+* outlineColor
+* outlineWidth
+* pixelSize
+* show
+* position
+    * cartesian
+    * cartographicDegrees
+    * cartographicRadians
+    * referenceFrame
+
+### label
+* horizontalOrigin
+* pixelOffset
+* scale
+* show
+* text
+
+### polyline
+* show
+* width
+* followSurface
+* positions
+    * cartesian
+    * cartographicDegrees
+    * cartographicRadians
+    * referenceFrame
+* material
+    * solidColor
+        * color
+    * polylineOutline
+        * color
+        * outlineColor
+        * outlineWidth
+    * polylineGlow
+        * color
+        * glowPower
+
+### path
+* show
+* width
+* resolution
+* leadTime
+* trailTime
+* position
+    * cartesian
+    * cartographicDegrees
+    * cartographicRadians
+    * referenceFrame
+* material
+    * solidColor
+        * color
+    * polylineOutline
+        * color
+        * outlineColor
+        * outlineWidth
+    * polylineGlow
+        * color
+        * glowPower
+
+### polygon
+* show
+* height
+* extrudedHeight
+* granularity
+* stRotation
+* fill
+* outline
+* outlineColor
+* perPositionHeight
+* positions
+    * cartesian
+    * cartographicDegrees
+    * cartographicRadians
+    * referenceFrame
+* material
+    * solidColor
+        * color
+    * image
+        * image
+        * repeat
+    * grid
+        * color
+        * cellAlpha
+        * lineCount
+        * lineThickness
+        * lineOffset
+    * stripe
+        * orientation
+        * evenColor
+        * offColor
+        * offset
+        * repeat
+
+### ellipse
+* show
+* fill
+* outline
+* outlineColor
+* height
+* rotation
+* stRotation
+* semiMajorAxis
+* semiMinorAxis
+* extrudedHeight
+* numberOfVerticalLines
+* position
+    * cartesian
+    * cartographicDegrees
+    * cartographicRadians
+    * referenceFrame
+* material
+    * solidColor
+        * color
+    * image
+        * image
+        * repeat
+    * grid
+        * color
+        * cellAlpha
+        * lineCount
+        * lineThickness
+        * lineOffset
+    * stripe
+        * orientation
+        * evenColor
+        * offColor
+        * offset
+        * repeat
+
+### ellipsoid
+* show
+* radii
+    * cartesian
+* material
+    * solidColor
+        * color
+    * image
+        * image
+        * repeat
+    * grid
+        * color
+        * cellAlpha
+        * lineCount
+        * lineThickness
+        * lineOffset
+    * stripe
+        * orientation
+        * evenColor
+        * offColor
+        * offset
+        * repeat
