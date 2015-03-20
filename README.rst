@@ -30,9 +30,7 @@ czml is continually tested with *Travis CI*
 Usage and Examples
 ------------------
 
-The general approach to writing CZML with this python library is to define a document object, define packets and append them to the document, and then write the document to a file using the `data()` method passed to `json.dump()`.
-
-:: code: python
+The general approach to writing CZML with this python library is to define a document object, define packets and append them to the document, and then write the document to a file using the `data()` method passed to `json.dump()`.::
 
     # Import the library
     from czml import czml
