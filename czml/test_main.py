@@ -504,7 +504,7 @@ class CzmlClassesTestCase(unittest.TestCase):
                 'outlineWidth': 2,
                 'show': True},
             'id': 'defg',
-            'vertexPositions':
+            'positions':
                 {'cartographicDegrees':
                     [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]}
             })
@@ -522,7 +522,7 @@ class CzmlClassesTestCase(unittest.TestCase):
                         {'color':
                             {'rgba': [0, 255, 127, 55]}}}},
                     'id': 'efgh',
-                    'vertexPositions':
+                    'positions':
                         {'cartographicDegrees':
                             [0.0, 0.0, 0.0, 1.0, 1.0, 1.0]}})
         p52 = czml.CZMLPacket(id='abc')
