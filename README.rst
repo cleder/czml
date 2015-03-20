@@ -63,4 +63,4 @@ Supported CZML Components
 The components in this library are developed to follow the `CZML Content documentation`_. Supported components and subcomponents are listed in `docs/COMPONENTS.md`_.
 
 .. _CZML Content documentation: https://github.com/AnalyticalGraphicsInc/cesium/wiki/CZML-Content
-.. _docs/COMPONENTS.md: https://github.com/cleder/czml/docs/COMPONENTS.md
+.. _docs/COMPONENTS.md: https://github.com/cleder/czml/blob/master/docs/COMPONENTS.md
