@@ -30,13 +30,28 @@ czml is continually tested with *Travis CI*
 Usage and Examples
 ------------------
 
-The general approach to writing CZML with this python library is to define a document object, define packets and append them to the document, and then write the document to a file using the `data()` method passed to `json.dump()`.::
+**Reading CZML**
+
+Reading a CZML file into a mutable document object can be done by initializing a CZML document and then reading the file's contents into the `loads()` method on the document, like so::
+
+    # Import the library
+    from czml import czml
+
+    # Read an existing CZML file
+    filename = 'example.czml'
+    with open(filename, 'r') as example:
+        doc = czml.CZML()
+        doc.loads(example.read())
+
+**Writing CZML**
+
+The general approach to writing CZML with this python library is to define a document object, define packets and append them to the document, and then write the document to a file using the `write()` method::
 
     # Import the library
     from czml import czml
 
     # Initialize a document
-    doc = czml.czml()
+    doc = czml.CZML()
 
     # Create and append the document packet
     packet1 = czml.CZMLPacket(id='document',version='1.0')
@@ -52,8 +67,7 @@ The general approach to writing CZML with this python library is to define a doc
     
     # Write the CZML document to a file
     filename = "example.czml"
-    with open(filename, 'w') as file:
-        json.dump(doc.data(), file)
+    doc.write(filename)
 
 Supported CZML Components
 -------------------------

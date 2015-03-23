@@ -1,3 +1,11 @@
+v 0.3.2 (2015/03/23)
+--------------------
+
+- Added czml.write() method
+- Updated broken write example in README to use write() method
+- Added read example to README
+- Cleaned up some of the framework (load/data/init) methods for CZMLPacket and others
+
 v 0.3.1 (2015/03/19)
 --------------------
 

@@ -15,7 +15,7 @@
 #    License along with this library; if not, write to the Free Software
 #    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
-import unittest
+import unittest, os
 from datetime import datetime, date
 import json
 from pytz import timezone, utc
@@ -229,23 +229,40 @@ class CzmlClassesTestCase(unittest.TestCase):
     def testDocument(self):
 
         # Create a new document packet
-        doc = czml.CZMLPacket(id='document', version='1.0')
-        self.assertEqual(doc.data(), {'id': 'document', 'version': '1.0'})
+        doc_packet1 = czml.CZMLPacket(id='document', version='1.0')
+        self.assertEqual(doc_packet1.data(), {'id': 'document', 'version': '1.0'})
 
         # Modify an existing document packet
-        doc.version = '1.1'
-        self.assertEqual(doc.data(), {'id': 'document', 'version': '1.1'})
+        doc_packet1.version = '1.1'
+        self.assertEqual(doc_packet1.data(), {'id': 'document', 'version': '1.1'})
 
         # Create a new document packet from an existing document packet
-        doc2 = czml.CZMLPacket()
-        doc2.loads(doc.dumps())
-        self.assertEqual(doc.data(), doc2.data())
+        doc_packet2 = czml.CZMLPacket()
+        doc_packet2.loads(doc_packet1.dumps())
+        self.assertEqual(doc_packet1.data(), doc_packet2.data())
 
         # Test that version can only be added to the document packet (id='document')
         with self.assertRaises(Exception):
-            doc = czml.CZMLPacket(id='foo', version='1.0')
-        doc = czml.CZMLPacket(id='foo')
-        self.assertRaises(Exception, setattr, doc, 'version', '1.0')
+            doc_packet1 = czml.CZMLPacket(id='foo', version='1.0')
+        doc_packet1 = czml.CZMLPacket(id='foo')
+        self.assertRaises(Exception, setattr, doc_packet1, 'version', '1.0')
+
+        # Test the writing of CZML using the write() method and the reading of that CZML using the loads() method
+        doc = czml.CZML()
+        doc.packets.append(doc_packet2)
+        label_packet = czml.CZMLPacket(id='label')
+        label = czml.Label()
+        label.text = 'test label'
+        label.show = True
+        label_packet.label = label
+        doc.packets.append(label_packet)
+        test_filename = 'test.czml'
+        doc.write(test_filename)
+        with open(test_filename, 'r') as test_file:
+            doc2 = czml.CZML()
+            doc2.loads(test_file.read())
+            self.assertEqual(doc.dumps(), doc2.dumps())
+        os.remove(test_filename)
 
     def testPosition(self):
 
@@ -360,10 +377,8 @@ class CzmlClassesTestCase(unittest.TestCase):
     def testBillboard(self):
 
         # Create a new billboard
-        bb = czml.Billboard()
+        bb = czml.Billboard(show=True, scale=0.7)
         bb.image = 'http://localhost/img.png'
-        bb.scale = 0.7
-        bb.show = True
         bb.color = {'rgba': [0, 255, 127, 55]}
         self.assertEqual(bb.data(), {'image': 'http://localhost/img.png',
                                      'scale': 0.7,
@@ -424,8 +439,6 @@ class CzmlClassesTestCase(unittest.TestCase):
         c = czml.Clock()
         self.assertRaises(Exception, setattr, doc, 'clock', c)
         
-        
-
     def testMaterial(self):
 
         # Create a new material

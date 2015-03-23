@@ -135,6 +135,10 @@ class _CZMLBaseObject(object):
     def properties(self):
         return self._properties
 
+    def write(self, filename):
+        with open(filename, 'w') as outfile:
+            json.dump(list(self.data()), outfile)
+
     def dumps(self):
         d = self.data()
         return json.dumps(d)
@@ -634,78 +638,22 @@ class Billboard(_CZMLBaseObject):
     in the scene by the position property.
     A billboard is sometimes called a marker."""
 
+    # Whether or not the billboard is shown.
+    show = None
+
     # The image displayed on the billboard, expressed as a URL.
     # For broadest client compatibility, the URL should be accessible
     # via Cross-Origin Resource Sharing (CORS).
     # The URL may also be a data URI.
     image = None
 
-    # Whether or not the billboard is shown.
-    show = None
-
     _color = None
 
     scale = None
 
-    def __init__(self, color=None, image=None, scale=None):
-        self.image = image
-        self.color = color
-        self.scale = scale
+    _properties = ('show','image','color','scale')
 
 
-
-    @property
-    def color(self):
-        """ The color of the billboard. This color value is multiplied
-        with the values of the billboard's "image" to produce the
-        final color."""
-        if self._color is not None:
-            return self._color.data()
-
-    @color.setter
-    def color(self, color):
-        if isinstance(color, Color):
-            self._color = color
-        elif isinstance(color, dict):
-            col = Color()
-            col.load(color)
-            self._color = col
-        elif color is None:
-            self._color = None
-        else:
-            raise TypeError
-
-    # @property
-    # def scale(self):
-        # """The scale of the billboard. The scale is multiplied with the
-        # pixel size of the billboard's image. For example, if the scale is
-        # 2.0, the billboard will be rendered with twice the number of pixels,
-        # in each direction, of the image."""
-        # return self._scale
-
-    # @scale.setter
-    # def scale(self, data):
-        # self._scale = Scale(data)
-
-    def data(self):
-        d = {}
-        if self.show:
-            d['show'] = True
-        if self.show == False:
-            d['show'] = False
-        if self.image:
-            d['image'] = self.image
-        if self.scale:  # XXX
-            d['scale'] = self.scale
-        if self.color is not None:
-            d['color'] = self.color
-        return d
-
-    def load(self, data):
-        self.show = data.get('show', None)
-        self.image = data.get('image', None)
-        self.scale = data.get('scale', None)
-        self.color = data.get('color', None)
 
 
 class Clock(_CZMLBaseObject):
@@ -1329,7 +1277,7 @@ class CZMLPacket(_CZMLBaseObject):
     # like "Buffering..." while it waits to receive the data. The property
     # can be a single string specifying a single interval, or an array
     # of strings representing intervals.
-    _availability = None
+    availability = None
 
     # The CZML version being written. Only valid on the document object.
     _version = None
@@ -1397,15 +1345,7 @@ class CZMLPacket(_CZMLBaseObject):
     _ellipse = None
     ellipse = class_property(Ellipse, 'ellipse')
 
-    # TODO: replace this.
-    def __init__(self, id=None, availability=None, version=None):
-        self.id = id
-        self.availability = availability
-        if version is not None:
-            if self.id == 'document':
-                self._version = version
-            else:
-                raise Exception("version can only be set on the document object")
+    _properties = ('id', 'version', 'availability', 'billboard', 'clock', 'position', 'label', 'point', 'positions', 'polyline', 'polygon', 'path', 'orientation', 'ellipse', 'ellipsoid', 'cone', 'pyramid')
 
     # TODO: Figure out how to set __doc__ from here.
     # position = class_property(Position, 'position')
@@ -1484,7 +1424,7 @@ class CZMLPacket(_CZMLBaseObject):
     @version.setter
     def version(self, version):
         if self.id != 'document':
-            raise Exception('version can only be set on the document object')
+            raise Exception('(2) version can only be set on the document object')
         if isinstance(version, str):
             self._version = version
         elif isinstance(version, basestring):
@@ -1641,57 +1581,18 @@ class CZMLPacket(_CZMLBaseObject):
         else:
             raise TypeError
 
-
     def data(self):
         d = {}
-        if self.id:
-            d['id'] = self.id
-        if self.version is not None:
-            if self.id == 'document':
-                d['version'] = self.version
-            else:
-                raise Exception("version can only be set on the document object")
-        if self.availability is not None:
-            d['availability'] = self.availability
-        if self.billboard is not None:
-            d['billboard'] = self.billboard
-        if self.clock is not None:
-            d['clock'] = self.clock
-        if self.position is not None:
-            d['position'] = self.position
-        if self.orientation is not None:
-            d['orientation'] = self.orientation
-        if self.label is not None:
-            d['label'] = self.label
-        if self.point is not None:
-            d['point'] = self.point
-        if self.positions is not None:
-            d['positions'] = self.positions
-        if self.polyline  is not None:
-            d['polyline'] = self.polyline
-        if self.polygon is not None:
-            d['polygon'] = self.polygon
-        if self.cone is not None:
-            d['cone'] = self.cone
-        if self.path is not None:
-            d['path'] = self.path
-        if self.ellipsoid is not None:
-            d['ellipsoid'] = self.ellipsoid
-        if self.ellipse is not None:
-            d['ellipse'] = self.ellipse
+        for property_name in self._properties:
+            property_value = getattr(self, property_name)
+            if property_value is not None:
+                d[property_name] = property_value
         return d
 
-
     def load(self, data):
-        self.id = data.get('id', None)
-        self.version = data.get('version', None)
-        # self.availability = data.get('availability', None)
-        self.billboard = data.get('billboard', None)
-        self.clock = data.get('clock', None)
-        self.position = data.get('position', None)
-        self.label = data.get('label', None)
-        self.point = data.get('point', None)
-        self.positions = data.get('positions', None)
-        self.polyline = data.get('polyline', None)
-        self.polygon = data.get('polygon', None)
+        for property_name in self._properties:
+            property_value = data.get(property_name, None)
+            if property_value is not None:
+                setattr(self, property_name, property_value)
+
 
