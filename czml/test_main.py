@@ -438,7 +438,7 @@ class CzmlClassesTestCase(unittest.TestCase):
         doc = czml.CZMLPacket(id='foo')
         c = czml.Clock()
         self.assertRaises(Exception, setattr, doc, 'clock', c)
-        
+
     def testMaterial(self):
 
         # Create a new material
@@ -607,7 +607,7 @@ class CzmlClassesTestCase(unittest.TestCase):
                                          {'cartographicDegrees': [0, -62, 141, 0,
                                                                   2, -51, 143, 0,
                                                                   4, -40, 145, 0]},
-                                                                  
+
                                      })
 
         # Create a new path from an existing path
@@ -659,7 +659,7 @@ class CzmlClassesTestCase(unittest.TestCase):
                                                                      8, 3000, 5500, 20]},
                                                   },
                                          })
-        
+
 
     def testPolyline(self):
 
@@ -678,7 +678,7 @@ class CzmlClassesTestCase(unittest.TestCase):
                                          {'cartographicDegrees': [-162, 41, 0,
                                                                   -151, 43, 0,
                                                                   -140, 45, 0]},
-                                                                  
+
                                      })
 
         # Create a new polyline
@@ -924,7 +924,7 @@ class CzmlClassesTestCase(unittest.TestCase):
 
 
     def testEllipsoid(self):
-        
+
         # Create a new ellipsoid
         ellipsoid_value = {'radii': {'cartesian': [1000.0, 2000.0, 3000.0]},
                            'material': {},
@@ -1008,6 +1008,50 @@ class CzmlClassesTestCase(unittest.TestCase):
                                                   'innerMaterial': {'solidColor': {'color': {'rgba': [0, 255, 127, 55]}}}
                                                   },
                                          })
+
+    def testDescription(self):
+
+        # Create a new description
+        d = czml.Description(string='<h1>Hello World</h1>',
+                             reference='the reference'
+                            )
+        self.assertEqual(d.data(), {'string': '<h1>Hello World</h1>',
+                                    'reference': 'the reference'
+                                   })
+
+        # Create a new description from an existing description
+        d2 = czml.Description()
+        d2.loads(d.dumps())
+        self.assertEqual(d2.data(), d.data())
+
+        # Change an existing description
+        d.string = '<h1>Hello World Again</h1>'
+        print(d)
+
+        self.assertEqual(d.data(), {'string': '<h1>Hello World Again</h1>',
+                                    'reference': 'the reference'
+                                   })
+
+        # Verfy passing unkown value
+        with self.assertRaises(Exception):
+            d3 = czml.Description(bad_data=None)
+
+        # Add description to CZML packet
+        packet = czml.CZMLPacket(id='the_id')
+        packet.description = d2
+        self.assertEqual(packet.data(), {'id': 'the_id',
+                                         'description': {'string': '<h1>Hello World</h1>',
+                                                          'reference': 'the reference'
+                                                          }
+                                         })
+
+        # Add a description as a dict
+        packet.description = {'string': 'As a dict'}
+        self.assertEqual(packet.data(), {'id': 'the_id',
+                                         'description': {'string': 'As a dict'
+                                                         }
+                                         })
+
 
 def test_suite():
     suite = unittest.TestSuite()
