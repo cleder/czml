@@ -659,7 +659,7 @@ class Billboard(_CZMLBaseObject):
 class Clock(_CZMLBaseObject):
     """The clock settings for the entire data set.
        Only valid on the document object."""
-    
+
     interval = None
 
     _currentTime = None
@@ -1037,7 +1037,7 @@ class Path(_DateTimeAware, _CZMLBaseObject):
 
     _width = None
     width = class_property(Number, 'width');
-    
+
     _leadTime = None
     leadTime = class_property(Number, 'leadTime');
 
@@ -1094,7 +1094,7 @@ class Polygon(_DateTimeAware, _CZMLBaseObject):
 
     _extrudedHeight = None
     extrudedHeight = class_property(Number, 'extrudedHeight')
-    
+
     _outlineColor = None
     outlineColor = class_property(Color, 'outlineColor')
 
@@ -1140,7 +1140,7 @@ class Ellipse(_DateTimeAware, _CZMLBaseObject):
 
     _numberOfVerticalLines = None
     numberOfVerticalLines = class_property(Number, 'numberOfVerticalLines')
-    
+
     _outlineColor = None
     outlineColor = class_property(Color, 'outlineColor')
 
@@ -1253,6 +1253,25 @@ class Camera(_CZMLBaseObject):
     """A camera."""
     pass
 
+class Description(_CZMLBaseObject):
+    string = None
+    reference = None
+    
+    def __init__(self, string=None, reference=None):
+        self.string = string
+        self.reference = reference
+    
+    def data(self):
+        d = {}
+        if self.string:
+            d['string'] = self.string
+        if self.reference:
+            d['reference'] = self.reference
+        return d
+    
+    def load(self, data):
+        self.string = data.get('string', None)
+        self.reference = data.get('reference', None)
 
 class CZMLPacket(_CZMLBaseObject):
     """  A CZML packet describes the graphical properties for a single
@@ -1345,10 +1364,32 @@ class CZMLPacket(_CZMLBaseObject):
     _ellipse = None
     ellipse = class_property(Ellipse, 'ellipse')
 
-    _properties = ('id', 'version', 'availability', 'billboard', 'clock', 'position', 'label', 'point', 'positions', 'polyline', 'polygon', 'path', 'orientation', 'ellipse', 'ellipsoid', 'cone', 'pyramid')
+    # try adding description
+    _description = None
+
+    _properties = ('id', 'description', 'version', 'availability', 'billboard', 'clock', 'position', 'label', 'point', 'positions', 'polyline', 'polygon', 'path', 'orientation', 'ellipse', 'ellipsoid', 'cone', 'pyramid')
 
     # TODO: Figure out how to set __doc__ from here.
     # position = class_property(Position, 'position')
+    
+    @property
+    def description(self):
+      if self._description is not None:
+        return self._description.data()
+    
+    @description.setter
+    def description(self, description):
+        if isinstance(description, Description):
+            self._description = description
+        elif isinstance(description, dict):
+            d = Description()
+            d.load(description)
+            self._description = d
+        elif description is None:
+            self._description = None
+        else:
+            raise TypeError
+    
     @property
     def position(self):
         """The position of the object in the world. The position has no direct
