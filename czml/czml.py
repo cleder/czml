@@ -139,9 +139,9 @@ class _CZMLBaseObject(object):
         with open(filename, 'w') as outfile:
             json.dump(list(self.data()), outfile)
 
-    def dumps(self):
+    def dumps(self, **kwargs):
         d = self.data()
-        return json.dumps(d)
+        return json.dumps(d, **kwargs)
 
     def data(self):
         d = {}
@@ -193,9 +193,9 @@ class CZML(_CZMLBaseObject):
         for p in self.packets:
             yield p.data()
 
-    def dumps(self):
+    def dumps(self, **kwargs):
         d = list(self.data())
-        return json.dumps(d)
+        return json.dumps(d, **kwargs)
 
     def load(self, data):
         self.packets = []
