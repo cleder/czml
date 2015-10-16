@@ -1,3 +1,8 @@
+v 0.4 (unreleased)
+-------------------
+
+- allow passing kwargs to dumps [Tim O'Shea (osh)]
+
 v 0.3.2 (2015/03/23)
 --------------------
 

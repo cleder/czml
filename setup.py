@@ -15,7 +15,7 @@ class PyTest(TestCommand):
         sys.exit(errno)
 
 
-version = '0.3.2'
+version = '0.4'
 
 setup(name='czml',
       version=version,
@@ -28,6 +28,7 @@ setup(name='czml',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)',
         'Development Status :: 4 - Beta',
