@@ -799,6 +799,8 @@ class Positions(_CZMLBaseObject):
             d['cartographicRadians'] = self.cartographicRadians.data()
         if self.cartesian:
             d['cartesian'] = self.cartesian.data()
+        if self.references:
+            d["references"] = self.references
         return d
 
 
