@@ -1509,7 +1509,7 @@ class CZMLPacket(_CZMLBaseObject):
             self._orientation = orientation
         elif isinstance(orientation, dict):
             p = Orientation()
-            p.load(point)
+            p.load(orientation)
             self._orientation = p
         elif orientation is None:
             self._orientation = None
