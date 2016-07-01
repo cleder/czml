@@ -3,7 +3,7 @@ Introduction
 
 This is an open source python library to read and write CZML_ files for Cesium_, the WebGL Earth modeling engine.
 
-.. _CZML: https://github.com/AnalyticalGraphicsInc/cesium/wiki/CZML-Guide
+.. _CZML: https://github.com/AnalyticalGraphicsInc/czml-writer/wiki/CZML-Guide
 .. _Cesium: http://cesiumjs.org/
 
 Requirements
@@ -74,5 +74,5 @@ Supported CZML Components
 
 The components in this library are developed to follow the `CZML Content documentation`_. Supported components and subcomponents are listed in `docs/COMPONENTS.md`_.
 
-.. _CZML Content documentation: https://github.com/AnalyticalGraphicsInc/cesium/wiki/CZML-Content
+.. _CZML Content documentation: https://github.com/AnalyticalGraphicsInc/czml-writer/wiki/Packet
 .. _docs/COMPONENTS.md: https://github.com/cleder/czml/blob/master/docs/COMPONENTS.md
