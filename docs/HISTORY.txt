@@ -1,7 +1,9 @@
-v 0.4 (unreleased)
+v 0.3.3 (2016-11-30)
 -------------------
 
-- allow passing kwargs to dumps [Tim O'Shea (osh)]
+- Added support for outlineWidth on polygons and ellipses [Christopher Clark (Frencil)]
+- Allow passing references [Tim O'Shea (osh)]
+- Allow passing kwargs to dumps [Tim O'Shea (osh)]
 
 v 0.3.2 (2015/03/23)
 --------------------
