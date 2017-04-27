@@ -926,6 +926,7 @@ class Label(_CZMLBaseObject):
     horizontalOrigin = None
     scale = None
     pixelOffset = None
+    fillColor = None
 
     def __init__(self, text=None, show=False):
         self.text = text
@@ -945,6 +946,8 @@ class Label(_CZMLBaseObject):
             d['scale'] = self.scale
         if self.pixelOffset:
             d['pixelOffset'] = self.pixelOffset
+        if self.fillColor:
+            d['fillColor'] = self.fillColor
         return d
 
     def load(self, data):
