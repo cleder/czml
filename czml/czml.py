@@ -1381,7 +1381,10 @@ class CZMLPacket(_CZMLBaseObject):
     # try adding description
     _description = None
 
-    _properties = ('id', 'description', 'version', 'availability', 'billboard', 'clock', 'position', 'label', 'point', 'positions', 'polyline', 'polygon', 'path', 'orientation', 'ellipse', 'ellipsoid', 'cone', 'pyramid')
+    # Model 3D
+    _model = None
+
+    _properties = ('id', 'description', 'version', 'availability', 'billboard', 'clock', 'position', 'label', 'point', 'positions', 'polyline', 'polygon', 'path', 'orientation', 'ellipse', 'ellipsoid', 'cone', 'pyramid', 'model')
 
     # TODO: Figure out how to set __doc__ from here.
     # position = class_property(Position, 'position')
@@ -1636,6 +1639,27 @@ class CZMLPacket(_CZMLBaseObject):
         else:
             raise TypeError
 
+
+    @property
+    def model(self):
+        """The Model 3d."""
+        if self._model is not None:
+            return self._model.data()
+
+    @model.setter
+    def model(self, model):
+        if isinstance(model, Model):
+            self._model = model
+        elif isinstance(model, dict):
+            m = Model()
+            m.load(model)
+            self._model = m
+        elif model is None:
+            self._model = None
+        else:
+            raise TypeError
+
+
     def data(self):
         d = {}
         for property_name in self._properties:
@@ -1650,4 +1674,50 @@ class CZMLPacket(_CZMLBaseObject):
             if property_value is not None:
                 setattr(self, property_name, property_value)
 
+
+class Model(_CZMLBaseObject):
+    """A 3D model. Based on https://github.com/AnalyticalGraphicsInc/czml-writer/wiki/Model """
+
+    # Whether or not the model is shown.
+    # Boolean
+    show = None
+
+    #Color
+    _color = None
+    color = class_property(Color, 'silhouetteColor')
+
+    #Double
+    _scale = None
+    scale = class_property(Number, 'scale')
+
+    #URI
+    gltf = None
+
+    minimumPixelSize = None
+
+    _runAnimations = None
+
+    maximumScale = None
+
+    incrementallyLoadTextures = None
+
+    shadows = None
+
+    heightReference = None
+
+    _silhouetteColor = None
+    silhouetteColor = class_property(Color, 'silhouetteColor')
+
+    silhouetteSize = None
+
+    colorBlendMode = None
+
+    colorBlendAmount = None
+
+    nodeTransformations = None
+  #  height = class_property(Number, 'height')
+
+    _properties = ('show', 'gltf', 'runAnimations', 'scale', 'maximumScale', 'minimumPixelSize',
+                   'incrementallyLoadTextures', 'shadows', 'heightReference', 'silhouetteColor', 'silhouetteSize',
+                   'color', 'colorBlendMode', 'colorBlendAmount', 'nodeTransformations')
 
