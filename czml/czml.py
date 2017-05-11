@@ -926,6 +926,7 @@ class Label(_CZMLBaseObject):
     horizontalOrigin = None
     scale = None
     pixelOffset = None
+    fillColor = None
 
     def __init__(self, text=None, show=False):
         self.text = text
@@ -945,6 +946,8 @@ class Label(_CZMLBaseObject):
             d['scale'] = self.scale
         if self.pixelOffset:
             d['pixelOffset'] = self.pixelOffset
+        if self.fillColor:
+            d['fillColor'] = self.fillColor
         return d
 
     def load(self, data):
@@ -1264,26 +1267,6 @@ class Camera(_CZMLBaseObject):
     """A camera."""
     pass
 
-class Description(_CZMLBaseObject):
-    string = None
-    reference = None
-    
-    def __init__(self, string=None, reference=None):
-        self.string = string
-        self.reference = reference
-    
-    def data(self):
-        d = {}
-        if self.string:
-            d['string'] = self.string
-        if self.reference:
-            d['reference'] = self.reference
-        return d
-    
-    def load(self, data):
-        self.string = data.get('string', None)
-        self.reference = data.get('reference', None)
-
 class CZMLPacket(_CZMLBaseObject):
     """  A CZML packet describes the graphical properties for a single
     object in the scene, such as a single aircraft.
@@ -1378,26 +1361,42 @@ class CZMLPacket(_CZMLBaseObject):
     # try adding description
     _description = None
 
-    _properties = ('id', 'description', 'version', 'availability', 'billboard', 'clock', 'position', 'label', 'point', 'positions', 'polyline', 'polygon', 'path', 'orientation', 'ellipse', 'ellipsoid', 'cone', 'pyramid')
+    # Model 3D
+    _model = None
+
+    _name = None
+
+    _properties = ('id', 'name', 'description', 'version', 'availability', 'billboard', 'clock', 'position', 'label', 'point', 'positions', 'polyline', 'polygon', 'path', 'orientation', 'ellipse', 'ellipsoid', 'cone', 'pyramid', 'model')
 
     # TODO: Figure out how to set __doc__ from here.
     # position = class_property(Position, 'position')
-    
+
+    @property
+    def name(self):
+        if self._name is not None:
+            return self._name
+
+
+    @name.setter
+    def name(self, name):
+        if isinstance(name, str):
+            self._name = name
+        elif isinstance(name, basestring):
+            self._name = name
+        else:
+            raise TypeError
+
     @property
     def description(self):
       if self._description is not None:
-        return self._description.data()
+        return self._description
     
     @description.setter
     def description(self, description):
-        if isinstance(description, Description):
+        if isinstance(description, str):
             self._description = description
-        elif isinstance(description, dict):
-            d = Description()
-            d.load(description)
-            self._description = d
-        elif description is None:
-            self._description = None
+        elif isinstance(description, basestring):
+            self._description = description
         else:
             raise TypeError
     
@@ -1633,6 +1632,26 @@ class CZMLPacket(_CZMLBaseObject):
         else:
             raise TypeError
 
+
+    @property
+    def model(self):
+        """The Model 3d."""
+        if self._model is not None:
+            return self._model.data()
+
+    @model.setter
+    def model(self, model):
+        if isinstance(model, Model):
+            self._model = model
+        elif isinstance(model, dict):
+            m = Model()
+            m.load(model)
+            self._model = m
+        elif model is None:
+            self._model = None
+        else:
+            raise TypeError
+
     def data(self):
         d = {}
         for property_name in self._properties:
@@ -1648,3 +1667,48 @@ class CZMLPacket(_CZMLBaseObject):
                 setattr(self, property_name, property_value)
 
 
+class Model(_CZMLBaseObject):
+    """A 3D model. Based on https://github.com/AnalyticalGraphicsInc/czml-writer/wiki/Model """
+
+    # Whether or not the model is shown.
+    # Boolean
+    show = None
+
+    #Color
+    _color = None
+    color = class_property(Color, 'silhouetteColor')
+
+    #Double
+    _scale = None
+    scale = class_property(Number, 'scale')
+
+    #URI
+    gltf = None
+
+    minimumPixelSize = None
+
+    runAnimations = None
+
+    maximumScale = None
+
+    incrementallyLoadTextures = None
+
+    shadows = None
+
+    heightReference = None
+
+    _silhouetteColor = None
+    silhouetteColor = class_property(Color, 'silhouetteColor')
+
+    silhouetteSize = None
+
+    colorBlendMode = None
+
+    colorBlendAmount = None
+
+    nodeTransformations = None
+  #  height = class_property(Number, 'height')
+
+    _properties = ('show', 'gltf', 'runAnimations', 'scale', 'maximumScale', 'minimumPixelSize',
+                   'incrementallyLoadTextures', 'shadows', 'heightReference', 'silhouetteColor', 'silhouetteSize',
+                   'color', 'colorBlendMode', 'colorBlendAmount', 'nodeTransformations')
