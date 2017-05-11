@@ -1,4 +1,9 @@
+czml/*.pyc
+czml/__pycache__/
 .idea
 build
 czml.egg-info/
 dist
+.cache
+pytest-3.0.7-py2.7.egg/
+py-1.4.33-py2.7.egg/

@@ -1010,47 +1010,13 @@ class CzmlClassesTestCase(unittest.TestCase):
                                          })
 
     def testDescription(self):
-
-        # Create a new description
-        d = czml.Description(string='<h1>Hello World</h1>',
-                             reference='the reference'
-                            )
-        self.assertEqual(d.data(), {'string': '<h1>Hello World</h1>',
-                                    'reference': 'the reference'
-                                   })
-
-        # Create a new description from an existing description
-        d2 = czml.Description()
-        d2.loads(d.dumps())
-        self.assertEqual(d2.data(), d.data())
-
-        # Change an existing description
-        d.string = '<h1>Hello World Again</h1>'
-        print(d)
-
-        self.assertEqual(d.data(), {'string': '<h1>Hello World Again</h1>',
-                                    'reference': 'the reference'
-                                   })
-
-        # Verfy passing unkown value
-        with self.assertRaises(Exception):
-            d3 = czml.Description(bad_data=None)
-
-        # Add description to CZML packet
         packet = czml.CZMLPacket(id='the_id')
-        packet.description = d2
-        self.assertEqual(packet.data(), {'id': 'the_id',
-                                         'description': {'string': '<h1>Hello World</h1>',
-                                                          'reference': 'the reference'
-                                                          }
-                                         })
+        packet.description = '<h1>Hello World</h1>'
+        self.assertEqual(packet.data(), {'id': 'the_id', 'description': '<h1>Hello World</h1>'})
 
         # Add a description as a dict
-        packet.description = {'string': 'As a dict'}
-        self.assertEqual(packet.data(), {'id': 'the_id',
-                                         'description': {'string': 'As a dict'
-                                                         }
-                                         })
+        packet.description = 'As a dict'
+        self.assertEqual(packet.data(), {'id': 'the_id', 'description': 'As a dict'})
 
 
 def test_suite():
