@@ -48,7 +48,7 @@ setup(name='czml',
       cmdclass = {'test': PyTest},
       install_requires=[
           # -*- Extra requirements: -*-
-          "pygeoif",
+          "pygeoif==0.7",
           'python-dateutil',
           'pytz',
       ],
